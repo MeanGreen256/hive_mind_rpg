@@ -29,14 +29,12 @@ var movement_state: PlayerMovementStateMachine.State:
 	get:
 		return _movement.state
 
-# Shared across all players so overlapping hitstops nest instead of clobbering
-# a time scale set elsewhere (pause, slow motion, another player's hitstop).
-static var _active_hitstop_count: int = 0
-static var _pre_hitstop_time_scale: float = 1.0
-
 var _movement: PlayerMovementStateMachine
 var _melee: PlayerMeleeAttack
-var _hitstop_active: bool = false
+var _hitstop_token: int = TimeScaleManager.INVALID_TOKEN
+# SceneTreeTimers outlive this node leaving/re-entering the tree; a timeout
+# only ends the hitstop whose generation it captured.
+var _hitstop_generation: int = 0
 
 
 func _ready() -> void:
@@ -132,23 +130,26 @@ func _on_melee_hitbox_area_entered(area: Area2D) -> void:
 
 
 func _start_hitstop() -> void:
-	if melee_hitstop_duration <= 0.0 or _hitstop_active:
+	if melee_hitstop_duration <= 0.0 or _hitstop_token != TimeScaleManager.INVALID_TOKEN:
 		return
-	_hitstop_active = true
-	if _active_hitstop_count == 0:
-		_pre_hitstop_time_scale = Engine.time_scale
-		Engine.time_scale = melee_hitstop_time_scale
-	_active_hitstop_count += 1
+	_hitstop_generation += 1
+	_hitstop_token = TimeScaleManager.acquire_modifier(melee_hitstop_time_scale)
 	var timer: SceneTreeTimer = get_tree().create_timer(
 		melee_hitstop_duration, true, false, true
 	)
-	timer.timeout.connect(_end_hitstop)
+	timer.timeout.connect(_on_hitstop_timer_timeout.bind(_hitstop_generation))
+
+
+func _on_hitstop_timer_timeout(generation: int) -> void:
+	if generation != _hitstop_generation:
+		return
+	_end_hitstop()
 
 
 func _end_hitstop() -> void:
-	if not _hitstop_active:
+	if _hitstop_token == TimeScaleManager.INVALID_TOKEN:
 		return
-	_hitstop_active = false
-	_active_hitstop_count = maxi(_active_hitstop_count - 1, 0)
-	if _active_hitstop_count == 0:
-		Engine.time_scale = _pre_hitstop_time_scale
+	# Invalidate any pending timer so it cannot end a future hitstop.
+	_hitstop_generation += 1
+	TimeScaleManager.release_modifier(_hitstop_token)
+	_hitstop_token = TimeScaleManager.INVALID_TOKEN

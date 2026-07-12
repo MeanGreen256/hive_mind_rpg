@@ -29,9 +29,7 @@ func after_each() -> void:
 
 
 func _reset_hitstop_state() -> void:
-	PlayerController._active_hitstop_count = 0
-	PlayerController._pre_hitstop_time_scale = 1.0
-	Engine.time_scale = 1.0
+	TimeScaleManager.reset()
 
 
 func test_dash_toggles_hurtbox_for_iframe_window() -> void:
@@ -149,7 +147,7 @@ func test_freeing_player_mid_swing_restores_hitstop_and_ends_swing() -> void:
 func test_hitstop_restores_pre_existing_time_scale() -> void:
 	_player.melee_hitstop_duration = 5.0
 	_player.melee_hitstop_time_scale = 0.5
-	Engine.time_scale = 0.25
+	TimeScaleManager.set_base_time_scale(0.75)
 
 	_player._start_hitstop()
 
@@ -157,7 +155,7 @@ func test_hitstop_restores_pre_existing_time_scale() -> void:
 
 	_player._end_hitstop()
 
-	assert_eq(Engine.time_scale, 0.25)
+	assert_eq(Engine.time_scale, 0.75)
 
 
 func test_overlapping_hitstops_only_restore_after_last_one_ends() -> void:
@@ -198,14 +196,105 @@ func test_freeing_one_of_two_hitstopped_players_does_not_restore_early() -> void
 	assert_eq(Engine.time_scale, 1.0)
 
 
-func test_ending_hitstop_twice_does_not_underflow_shared_count() -> void:
+func test_hitstop_end_preserves_external_time_scale_change() -> void:
+	_player.melee_hitstop_duration = 5.0
+	_player.melee_hitstop_time_scale = 0.5
+	_player._start_hitstop()
+
+	# Another system pauses through the shared coordinator while hitstop is active.
+	TimeScaleManager.set_base_time_scale(0.0)
+
+	_player._end_hitstop()
+
+	assert_eq(Engine.time_scale, 0.0)
+	assert_eq(TimeScaleManager.get_modifier_count(), 0)
+
+
+func test_overlapping_hitstops_preserve_external_time_scale_change() -> void:
+	_player.melee_hitstop_duration = 5.0
+	_player.melee_hitstop_time_scale = 0.5
+	var other_player: PlayerController = PLAYER_SCENE.instantiate() as PlayerController
+	other_player.melee_hitstop_duration = 5.0
+	other_player.melee_hitstop_time_scale = 0.5
+	add_child_autofree(other_player)
+	_player._start_hitstop()
+	other_player._start_hitstop()
+
+	TimeScaleManager.set_base_time_scale(0.1)
+
+	_player._end_hitstop()
+
+	assert_eq(Engine.time_scale, 0.1)
+
+	other_player._end_hitstop()
+
+	assert_eq(Engine.time_scale, 0.1)
+
+
+func test_same_scale_external_change_survives_hitstop_end() -> void:
+	_player.melee_hitstop_duration = 5.0
+	_player.melee_hitstop_time_scale = 0.5
+	_player._start_hitstop()
+
+	# This was the false-positive case for float equality ownership checks.
+	TimeScaleManager.set_base_time_scale(0.5)
+	_player._end_hitstop()
+
+	assert_eq(Engine.time_scale, 0.5)
+
+
+func test_stale_timeout_generation_is_ignored() -> void:
+	_player.melee_hitstop_duration = 5.0
+	_player.melee_hitstop_time_scale = 0.5
+	_player._start_hitstop()
+	var stale_generation: int = _player._hitstop_generation
+	_player._end_hitstop()
+	_player._start_hitstop()
+
+	_player._on_hitstop_timer_timeout(stale_generation)
+
+	assert_eq(Engine.time_scale, 0.5)
+	assert_eq(TimeScaleManager.get_modifier_count(), 1)
+
+	_player._on_hitstop_timer_timeout(_player._hitstop_generation)
+
+	assert_eq(Engine.time_scale, 1.0)
+	assert_eq(TimeScaleManager.get_modifier_count(), 0)
+
+
+func test_stale_timer_after_reparent_does_not_end_new_hitstop() -> void:
+	_player.melee_hitstop_duration = 0.1
+	_player.melee_hitstop_time_scale = 0.5
+	_player._start_hitstop()
+
+	remove_child(_player)
+
+	assert_eq(Engine.time_scale, 1.0)
+
+	add_child(_player)
+	_player.melee_hitstop_duration = 5.0
+	_player._start_hitstop()
+
+	assert_eq(Engine.time_scale, 0.5)
+
+	# Real time long enough for the first hitstop's 0.1 s timer to fire.
+	await wait_seconds(0.4)
+
+	assert_eq(Engine.time_scale, 0.5)
+
+	_player._end_hitstop()
+
+	assert_eq(Engine.time_scale, 1.0)
+
+
+func test_ending_hitstop_twice_does_not_release_another_modifier() -> void:
 	_player.melee_hitstop_duration = 5.0
 	_player.melee_hitstop_time_scale = 0.5
 	_player._start_hitstop()
 	_player._end_hitstop()
 	_player._end_hitstop()
 
-	assert_eq(PlayerController._active_hitstop_count, 0)
+	assert_eq(TimeScaleManager.get_modifier_count(), 0)
 	assert_eq(Engine.time_scale, 1.0)
 
 
