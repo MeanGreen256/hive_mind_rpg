@@ -31,6 +31,8 @@ signal relic_ability_blocked()
 @onready var _hurtbox: Hurtbox = %Hurtbox
 @onready var _melee_hitbox: Hitbox = %MeleeHitbox
 @onready var energy: EnergyComponent = %EnergyComponent
+@onready var health: HealthComponent = %HealthComponent
+@onready var _hud: PlayerHud = %PlayerHud
 
 var movement_state: PlayerMovementStateMachine.State:
 	get:
@@ -61,6 +63,8 @@ func _ready() -> void:
 	_melee.swing_ended.connect(_on_melee_swing_ended)
 	_melee_hitbox.damage = melee_damage
 	_melee_hitbox.area_entered.connect(_on_melee_hitbox_area_entered)
+	_hurtbox.hit_received.connect(health.apply_hit)
+	_hud.bind(health, energy)
 
 
 func _physics_process(delta: float) -> void:
