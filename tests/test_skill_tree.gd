@@ -109,6 +109,7 @@ func _make_skill(
 	skill.id = id
 	skill.cost = 1
 	skill.prerequisite_ids = prerequisite_ids
+	skill.effect_parameters = {&"attack_multiplier": 1.1}
 	skill.display_name = str(id).capitalize()
 	skill.description = "Test skill."
 	return skill
