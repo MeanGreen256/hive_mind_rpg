@@ -96,7 +96,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
 
-[node name="RespawnController" type="Node" parent="." node_paths=PackedStringArray("player_path", "health_component_path", "fade_rect_path")]
+[node name="RespawnController" type="Node" parent="."]
 unique_name_in_owner = true
 script = ExtResource("5_respawn")
 player_path = NodePath("../Player")
