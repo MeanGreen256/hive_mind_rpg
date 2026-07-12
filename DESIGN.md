@@ -80,6 +80,7 @@ Unlock skill tree branches → develop a distinct build → clear zone boss → 
 - **World structure:** Hub + themed zones.
   - **Hub:** safe settlement — skill tree/respec, checkpoint, a few flavor NPCs, gates to zones.
   - **Zones:** hand-built themed areas (v1: one zone), each with its own enemy set, secrets, checkpoint(s), and boss.
+  - **Zone 1:** corrupted forest — an overgrown woodland warped by buried relic machinery, where familiar paths are disrupted by glitching geometry and unnatural growth.
 - **Dialogue:** Minimal. Short NPC barks and item descriptions carry lore (pillar 4 is lowest priority). No branching dialogue system in v1.
 
 ---
@@ -163,7 +164,6 @@ Unlock skill tree branches → develop a distinct build → clear zone boss → 
 |---|---|---|---|
 | 1 | Game's actual title (repo stays hive_mind_rpg) | No | Team |
 | 2 | Story seed — what is the buried thing? | No (v1 barks only) | Team |
-| 3 | Theme of zone 1 (forest? battlefield? relic excavation?) | Yes — blocks zone art & enemy design | Team |
 
 ---
 
@@ -174,3 +174,4 @@ Unlock skill tree branches → develop a distinct build → clear zone boss → 
 | 2026-07-10 | 0.1 | Initial scaffold | Claude + MeanGreen256 |
 | 2026-07-10 | 0.2 | Filled from design interview: pillars, loops, combat, tree, world, v1 slice, tech decisions | Claude + MeanGreen256 |
 | 2026-07-11 | 0.3 | Locked passive Energy regeneration and fixed 8-direction relic aiming | Codex + MeanGreen256 |
+| 2026-07-11 | 0.4 | Locked Zone 1 theme as a corrupted forest | Codex + MeanGreen256 |
