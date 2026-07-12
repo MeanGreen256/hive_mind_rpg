@@ -10,6 +10,7 @@ var _hurtbox: Hurtbox
 var _melee_hitbox: Hitbox
 var _input_sender: GutInputSender
 var _energy: EnergyComponent
+var _health: HealthComponent
 
 
 func before_each() -> void:
@@ -21,6 +22,7 @@ func before_each() -> void:
 	_hurtbox = _player.get_node("Hurtbox") as Hurtbox
 	_melee_hitbox = _player.get_node("MeleeHitbox") as Hitbox
 	_energy = _player.get_node("EnergyComponent") as EnergyComponent
+	_health = _player.get_node("HealthComponent") as HealthComponent
 	_input_sender = GutInputSender.new(Input)
 
 
@@ -45,6 +47,18 @@ func test_dash_toggles_hurtbox_for_iframe_window() -> void:
 	_player._movement.finish_frame(Vector2.RIGHT)
 
 	assert_true(_hurtbox.enabled)
+
+
+func test_player_hurtbox_applies_damage_to_health_and_hud() -> void:
+	var hitbox := Hitbox.new()
+	hitbox.damage = 2
+	add_child_autofree(hitbox)
+
+	_hurtbox.receive_hit(hitbox)
+
+	assert_eq(_health.current_health, _health.max_health - 2)
+	var hud: PlayerHud = _player.get_node("PlayerHud") as PlayerHud
+	assert_eq(hud.health_value, float(_health.current_health))
 
 
 func test_cancel_dash_restores_hurtbox() -> void:
