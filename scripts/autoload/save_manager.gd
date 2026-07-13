@@ -4,9 +4,11 @@ extends Node
 ##
 ## Persisted: GameState progression (skill points + unlocked ids), the last
 ## checkpoint (scene path + position), and collected secret ids (recorded by
-## SkillPointPickup, issue #24). Anything invalid — missing
-## file, unparseable JSON, wrong shapes, unknown skill ids — degrades to a
-## new game with a warning, never a crash.
+## SkillPointPickup, issue #24). A missing file, unparseable JSON, or wrong
+## shape degrades to a new game with a warning, never a crash. Skill ids that
+## are unknown or lack their prerequisite closure (issue #76) are pruned
+## individually by GameState.restore_progress() while the rest of the save
+## still loads, so one bad unlock cannot cost the checkpoint and secrets.
 
 signal game_saved()
 signal game_loaded()

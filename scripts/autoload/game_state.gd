@@ -95,23 +95,65 @@ func respec_skills() -> int:
 
 func restore_progress(skill_points: int, unlocked_skill_ids: Array[StringName]) -> bool:
 	# Restores a saved run (issue #19). Ids are validated against the authored
-	# tree and deduped so a hand-edited or corrupt save can never inject
-	# unknown skills; existing unlock/point signals re-fire so live consumers
-	# (player stats, tree UI) refresh through their normal paths.
+	# tree, deduped, and pruned to their prerequisite closure (issue #76) so a
+	# hand-edited or corrupt save can never inject unknown skills or unlocks
+	# that spend_points() progression could not reach — and respec can never
+	# refund points for them. Existing unlock/point signals re-fire so live
+	# consumers (player stats, tree UI) refresh through their normal paths.
 	if skill_points < 0:
 		return false
-	var restored_ids: Array[StringName] = []
+	var known_ids: Array[StringName] = []
 	for skill_id: StringName in unlocked_skill_ids:
 		if skill_tree.get_node(skill_id) == null:
 			push_warning("GameState dropped unknown saved skill '%s'." % skill_id)
 			continue
-		if not restored_ids.has(skill_id):
-			restored_ids.append(skill_id)
+		if not known_ids.has(skill_id):
+			known_ids.append(skill_id)
+	var restored_ids: Array[StringName] = _prerequisite_reachable_subset(known_ids)
 	_skill_points = skill_points
 	_unlocked_skill_ids = restored_ids
 	skill_points_changed.emit(_skill_points)
 	for skill_id: StringName in restored_ids:
 		skill_unlocked.emit(skill_id)
+	return true
+
+
+func _prerequisite_reachable_subset(candidate_ids: Array[StringName]) -> Array[StringName]:
+	# Saves serialize unlock order arbitrarily, so admission iterates to a
+	# fixpoint instead of trusting array order: a skill is admitted once every
+	# prerequisite is itself admitted, which keeps exactly the unlocks normal
+	# spend_points() progression could have produced. Invalid entries are
+	# pruned individually — matching the unknown-id policy in
+	# restore_progress() — rather than rejecting the whole restore, so one bad
+	# unlock cannot cost the player their checkpoint and secrets.
+	var admitted_ids: Dictionary[StringName, bool] = {}
+	var admitted_new_id: bool = true
+	while admitted_new_id:
+		admitted_new_id = false
+		for skill_id: StringName in candidate_ids:
+			if admitted_ids.has(skill_id):
+				continue
+			if _all_prerequisites_admitted(skill_id, admitted_ids):
+				admitted_ids[skill_id] = true
+				admitted_new_id = true
+	var reachable_ids: Array[StringName] = []
+	for skill_id: StringName in candidate_ids:
+		if admitted_ids.has(skill_id):
+			reachable_ids.append(skill_id)
+		else:
+			push_warning(
+				"GameState dropped saved skill '%s' with unmet prerequisites." % skill_id
+			)
+	return reachable_ids
+
+
+func _all_prerequisites_admitted(
+	skill_id: StringName,
+	admitted_ids: Dictionary[StringName, bool],
+) -> bool:
+	for prerequisite_id: StringName in skill_tree.get_node(skill_id).prerequisite_ids:
+		if not admitted_ids.has(prerequisite_id):
+			return false
 	return true
 
 

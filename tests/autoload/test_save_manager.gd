@@ -111,6 +111,45 @@ func test_unknown_skill_ids_in_save_are_dropped_on_load() -> void:
 	assert_false(GameState.is_skill_unlocked(&"hacked_super_skill"))
 
 
+func test_prerequisite_invalid_unlock_is_pruned_but_the_save_still_loads() -> void:
+	# steel_guard_breaker without its steel_follow_through prerequisite (issue
+	# #76): the invalid unlock is pruned, but the rest of the save — points,
+	# checkpoint — survives instead of falling back to a new game.
+	_write_raw_save(JSON.stringify({
+		"version": 1,
+		"skill_points": 0,
+		"unlocked_skill_ids": ["steel_guard_breaker"],
+		"checkpoint": {"scene_path": "res://somewhere.tscn", "x": 3, "y": 4},
+		"collected_secret_ids": ["grove_cache"],
+	}))
+
+	assert_true(SaveManager.load_game())
+	assert_false(GameState.is_skill_unlocked(&"steel_guard_breaker"))
+	assert_true(GameState.get_unlocked_skill_ids().is_empty())
+	assert_eq(SaveManager.checkpoint_scene_path, "res://somewhere.tscn")
+	assert_true(SaveManager.is_secret_collected(&"grove_cache"))
+	assert_eq(GameState.respec_skills(), 0)
+	assert_eq(GameState.get_skill_points(), 0)
+
+
+func test_out_of_order_serialized_unlocks_restore_completely() -> void:
+	_write_raw_save(JSON.stringify({
+		"version": 1,
+		"skill_points": 2,
+		"unlocked_skill_ids": [
+			"steel_guard_breaker", "steel_follow_through", "steel_tempered_edge",
+		],
+		"checkpoint": {"scene_path": "", "x": 0, "y": 0},
+		"collected_secret_ids": [],
+	}))
+
+	assert_true(SaveManager.load_game())
+	assert_eq(GameState.get_skill_points(), 2)
+	assert_true(GameState.is_skill_unlocked(&"steel_tempered_edge"))
+	assert_true(GameState.is_skill_unlocked(&"steel_follow_through"))
+	assert_true(GameState.is_skill_unlocked(&"steel_guard_breaker"))
+
+
 func test_record_secret_collected_persists_across_load() -> void:
 	assert_true(SaveManager.record_secret_collected(&"grove_cache"))
 
