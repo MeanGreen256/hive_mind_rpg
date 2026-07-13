@@ -13,6 +13,7 @@ Keep local editor, headless test, and CI versions aligned with 4.7 stable.
 - Dash: Space or gamepad south button
 - Melee attack: J or gamepad west button
 - Relic energy bolt: K or gamepad north button
+- Fold Step: Q or gamepad left shoulder (after unlocking it)
 
 ## Running tests
 
