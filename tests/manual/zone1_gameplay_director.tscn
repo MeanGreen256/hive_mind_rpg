@@ -1,0 +1,64 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://tests/manual/zone1_gameplay_director.gd" id="1_director"]
+[ext_resource type="PackedScene" path="res://scenes/world/zone1_graybox.tscn" id="2_zone"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.025, 0.035, 0.05, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.22, 0.78, 0.86, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="LabelSettings" id="LabelSettings_phase"]
+font_size = 12
+font_color = Color(0.35, 0.95, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_intent"]
+font_size = 8
+font_color = Color(0.92, 0.94, 0.88, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_status"]
+font_size = 7
+font_color = Color(1, 0.82, 0.4, 1)
+
+[node name="Zone1GameplayDirector" type="Node2D"]
+script = ExtResource("1_director")
+
+[node name="Zone1Graybox" parent="." instance=ExtResource("2_zone")]
+
+[node name="CaptureUI" type="CanvasLayer" parent="."]
+layer = 100
+
+[node name="Panel" type="PanelContainer" parent="CaptureUI"]
+offset_left = 134.0
+offset_top = 8.0
+offset_right = 632.0
+offset_bottom = 65.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="CaptureUI/Panel"]
+theme_override_constants/margin_left = 9
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 9
+theme_override_constants/margin_bottom = 5
+
+[node name="VBox" type="VBoxContainer" parent="CaptureUI/Panel/Margin"]
+theme_override_constants/separation = 1
+
+[node name="Phase" type="Label" parent="CaptureUI/Panel/Margin/VBox"]
+label_settings = SubResource("LabelSettings_phase")
+text = "ZONE 1 AUTONOMOUS PLAYTEST"
+
+[node name="Intent" type="Label" parent="CaptureUI/Panel/Margin/VBox"]
+label_settings = SubResource("LabelSettings_intent")
+text = "Goal-directed exploration and tactical combat"
+
+[node name="Status" type="Label" parent="CaptureUI/Panel/Margin/VBox"]
+label_settings = SubResource("LabelSettings_status")
+text = "HP 10/10 · Energy 100/100"
