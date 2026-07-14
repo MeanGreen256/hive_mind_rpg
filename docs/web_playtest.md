@@ -83,6 +83,25 @@ Cloudflare Pages behind Cloudflare Access, or a static host behind SSO/basic
 auth). There is deliberately no default target, no committed credentials,
 and nothing deploys from CI.
 
+### Small trusted group: temporary Basic Auth origin
+
+For a short playtest with a few trusted people, `tools/serve_web_auth.py`
+provides a narrow alternative to an identity gateway. It **only** binds to
+loopback and refuses to start unless a long password is supplied in a mode-0600
+file outside the repo:
+
+```bash
+WEB_PLAYTEST_USERNAME=playtester \
+WEB_PLAYTEST_PASSWORD_FILE=/absolute/path/to/password-file \
+python3 tools/serve_web_auth.py --host 127.0.0.1 --port 9125
+```
+
+Put this server behind a dedicated **named** Cloudflare Tunnel hostname. Do not
+use a public quick tunnel. The password must be at least 20 characters, must
+not be committed or logged, and must be rotated or the server stopped when the
+round ends. This is appropriate only for a small, trusted group; use
+Cloudflare Access for recurring or wider testing.
+
 - **Launch**: build, then run `tools/deploy_web.sh`. It fails closed unless
   you set `WEB_PLAYTEST_DEPLOY_CMD` (the upload command for your gated
   target, credentials supplied via your own environment/secret store) and
