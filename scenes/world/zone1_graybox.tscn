@@ -1,6 +1,7 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/zone1_graybox.gd" id="1_zone"]
+[ext_resource type="PackedScene" path="res://scenes/world/interactable_zone.tscn" id="10_exit_zone"]
 [ext_resource type="Script" path="res://scripts/world/camera_limits.gd" id="9_camera_limits"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/world/checkpoint.tscn" id="3_checkpoint"]
@@ -33,6 +34,16 @@ position = Vector2(88, 248)
 [node name="ZoneEntrance" type="Marker2D" parent="."]
 unique_name_in_owner = true
 position = Vector2(40, 248)
+
+[node name="ExitGateVisual" type="Polygon2D" parent="."]
+position = Vector2(24, 248)
+polygon = PackedVector2Array(-8, -36, 8, -36, 8, 36, -8, 36)
+color = Color(0.55, 0.45, 0.65, 1)
+
+[node name="ExitZone" parent="." instance=ExtResource("10_exit_zone")]
+unique_name_in_owner = true
+position = Vector2(40, 248)
+prompt_text = "[E] Return to Hub"
 
 [node name="BossArenaAnchor" type="Marker2D" parent="."]
 unique_name_in_owner = true

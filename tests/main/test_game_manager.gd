@@ -222,3 +222,21 @@ func test_repeated_transitions_keep_singletons_and_working_contracts() -> void:
 			_autoload_instance_count(autoload_name), 1,
 			"Transitions never duplicate the %s autoload." % autoload_name
 		)
+
+
+func test_zone1_exit_gate_returns_to_the_hub() -> void:
+	var main: GameManager = _add_main()
+	var zone: Zone1Graybox = await _enter_zone1(main)
+	assert_not_null(zone, "Precondition: gate travel into Zone 1 works.")
+	if zone == null:
+		return
+
+	var exit_zone: InteractableZone = zone.get_node_or_null("%ExitZone") as InteractableZone
+	assert_not_null(exit_zone, "Zone 1 exposes its in-world exit gate (#105).")
+	if exit_zone == null:
+		return
+	exit_zone.interact()
+	await wait_process_frames(2)
+
+	assert_true(main.is_hub_active(), "The exit gate travels back to the hub.")
+	_assert_single_player_hud_and_camera("after exit-gate return")

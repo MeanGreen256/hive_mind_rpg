@@ -304,3 +304,19 @@ func test_collected_secrets_award_points_and_stay_gone_after_reload() -> void:
 		reloaded_zone.get_secret_pickups().size(), 0,
 		"Collected secrets never respawn on reload."
 	)
+
+
+func test_exit_gate_emits_hub_return_request_on_interact() -> void:
+	var zone: Zone1Graybox = _add_zone()
+	var exit_zone: InteractableZone = zone.get_node_or_null("%ExitZone") as InteractableZone
+	assert_not_null(exit_zone, "Zone 1 has an in-world exit gate at its entrance (#105).")
+	if exit_zone == null:
+		return
+
+	watch_signals(zone)
+	exit_zone.interact()
+
+	assert_signal_emitted(
+		zone, "hub_return_requested",
+		"The exit gate raises the typed return request for the owner (#68) to consume."
+	)

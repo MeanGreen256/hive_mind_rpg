@@ -78,6 +78,10 @@ func _enter_world(world_scene: PackedScene) -> void:
 		hub.zone_entry_requested.connect(_on_zone_entry_requested)
 	else:
 		_move_player_to_zone_entrance(world)
+		# Zones with an in-world exit gate (#105) raise the same return
+		# request as the pause menu; duck-typed like %ZoneEntrance above.
+		if world.has_signal(&"hub_return_requested"):
+			world.connect(&"hub_return_requested", _on_return_to_hub_requested)
 	_is_transitioning = false
 
 
