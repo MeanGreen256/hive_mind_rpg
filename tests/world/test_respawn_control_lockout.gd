@@ -1,8 +1,9 @@
 extends GutTest
 ## Integration coverage for issue #79: while the RespawnController runs the
 ## death → fade → respawn → fade-in transition, the real PlayerController must
-## be fully locked out (no movement, dash, melee, or relic input), and control
-## must come back exactly once after the transition completes.
+## be fully locked out (no movement, dash, melee, relic, or utility/Fold Step
+## input), and control must come back exactly once after the transition
+## completes.
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player/player.tscn")
 
@@ -111,6 +112,52 @@ func test_attacks_and_relic_are_blocked_during_respawn() -> void:
 
 	assert_false(_player._melee.is_swinging)
 	assert_false(_player.get_parent().has_node("EnergyBolt"))
+
+
+func test_utility_ability_is_blocked_during_respawn() -> void:
+	# Fold Step (short_teleport) is a third input path alongside melee and relic;
+	# the lockout must cover it too or a dead player could teleport their body
+	# around behind the fade (issue #79).
+	_unlock_fold_step()
+	await wait_physics_frames(1)
+
+	_kill_player()
+	await wait_physics_frames(1)
+	assert_true(_controller.is_respawning())
+
+	var position_during_respawn: Vector2 = _player.global_position
+	assert_false(
+		_player.try_use_ability(PlayerController.SHORT_TELEPORT_ABILITY_ID),
+		"Fold Step must be refused while control is disabled"
+	)
+	assert_eq(_player.global_position, position_during_respawn)
+
+	_input_sender.action_down("ability_utility")
+	await wait_physics_frames(3)
+
+	assert_true(_controller.is_respawning())
+	assert_eq(_player.global_position, position_during_respawn)
+
+
+func _unlock_fold_step() -> void:
+	# Unlock through the real progression path so the ability is genuinely
+	# granted (and its energy is available) when the test invokes it.
+	GameState.award_skill_points(50)
+	_unlock_with_prerequisites(&"relic_fold_step")
+	assert_true(
+		GameState.is_skill_unlocked(&"relic_fold_step"),
+		"Fold Step should be unlocked for this test"
+	)
+
+
+func _unlock_with_prerequisites(skill_id: StringName) -> void:
+	var node: SkillNode = GameState.skill_tree.get_node(skill_id)
+	if node == null:
+		return
+	for prerequisite_id: StringName in node.prerequisite_ids:
+		_unlock_with_prerequisites(prerequisite_id)
+	if not GameState.is_skill_unlocked(skill_id):
+		GameState.spend_points(skill_id)
 
 
 func test_control_is_restored_exactly_once_after_respawn_completes() -> void:

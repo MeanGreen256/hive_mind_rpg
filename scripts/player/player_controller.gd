@@ -121,7 +121,7 @@ func _physics_process(delta: float) -> void:
 		try_melee_attack()
 	if _control_enabled and Input.is_action_just_pressed(&"ability_relic"):
 		try_relic_ability()
-	if Input.is_action_just_pressed(&"ability_utility"):
+	if _control_enabled and Input.is_action_just_pressed(&"ability_utility"):
 		try_use_ability(SHORT_TELEPORT_ABILITY_ID)
 	_melee.update(delta)
 
@@ -182,6 +182,8 @@ func try_relic_ability() -> bool:
 ## Typed dispatch point for abilities granted by UNLOCK_ABILITY skill nodes.
 ## Input and future UI loadouts call this API rather than hardcoding scenes.
 func try_use_ability(ability_id: StringName) -> bool:
+	if not _control_enabled:
+		return false
 	var ability_node: SkillNode = _get_unlocked_ability_node(ability_id)
 	if ability_node == null or not PlayerSkillEffectRegistry.supports(ability_node):
 		tree_ability_blocked.emit(ability_id)
