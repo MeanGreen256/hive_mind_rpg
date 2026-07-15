@@ -9,6 +9,15 @@ const CHASER_SCENE: PackedScene = preload("res://scenes/enemies/melee_chaser.tsc
 const ZONE_SCENE: PackedScene = preload("res://scenes/world/zone1_graybox.tscn")
 const FOREST_ATLAS_PATH: String = "res://assets/sprites/world/zone1_forest_tiles.png"
 const CHASER_TEXTURE: Texture2D = preload("res://assets/sprites/enemies/melee_chaser.png")
+const HARASSER_TEXTURE: Texture2D = preload("res://assets/sprites/enemies/ranged_harasser.png")
+const BRUTE_TEXTURE: Texture2D = preload("res://assets/sprites/enemies/shielded_brute.png")
+const FLANKER_TEXTURE: Texture2D = preload("res://assets/sprites/enemies/fast_flanker.png")
+const HARASSER_FRAMES: SpriteFrames = preload("res://assets/sprites/enemies/ranged_harasser_frames.tres")
+const BRUTE_FRAMES: SpriteFrames = preload("res://assets/sprites/enemies/shielded_brute_frames.tres")
+const FLANKER_FRAMES: SpriteFrames = preload("res://assets/sprites/enemies/fast_flanker_frames.tres")
+const HARASSER_SCENE: PackedScene = preload("res://scenes/enemies/ranged_harasser.tscn")
+const BRUTE_SCENE: PackedScene = preload("res://scenes/enemies/shielded_brute.tscn")
+const FLANKER_SCENE: PackedScene = preload("res://scenes/enemies/fast_flanker.tscn")
 const FOREST_TEXTURE: Texture2D = preload("res://assets/sprites/world/zone1_forest_tiles.png")
 var _png_signature: PackedByteArray = PackedByteArray([137, 80, 78, 71, 13, 10, 26, 10])
 const CHASER_FRAME_SIZE: Vector2i = Vector2i(24, 24)
@@ -31,6 +40,32 @@ func test_chaser_sprite_frames_match_manifest_animation_contract() -> void:
 	_assert_animation_frame_count(&"attack_melee", 3)
 	_assert_animation_frame_count(&"hurt", 2)
 	_assert_animation_frame_count(&"death", 5)
+
+
+func test_regular_enemy_roster_uses_distinct_production_sheets_and_animated_visuals() -> void:
+	_assert_regular_enemy_art(HARASSER_SCENE, HARASSER_FRAMES, HARASSER_TEXTURE, "res://assets/sprites/enemies/ranged_harasser.png")
+	_assert_regular_enemy_art(BRUTE_SCENE, BRUTE_FRAMES, BRUTE_TEXTURE, "res://assets/sprites/enemies/shielded_brute.png")
+	_assert_regular_enemy_art(FLANKER_SCENE, FLANKER_FRAMES, FLANKER_TEXTURE, "res://assets/sprites/enemies/fast_flanker.png")
+
+
+func _assert_regular_enemy_art(
+	scene: PackedScene, frames: SpriteFrames, texture: Texture2D, texture_path: String
+) -> void:
+	_assert_png_dimensions(texture_path, texture, Vector2i(144, 240))
+	for animation_name: StringName in [
+		&"idle_down", &"idle_up", &"idle_side", &"walk_down", &"walk_up", &"walk_side",
+		&"windup", &"attack_melee", &"hurt", &"death",
+	]:
+		assert_true(frames.has_animation(animation_name), "%s animation must exist." % animation_name)
+	var enemy: EnemyBase = scene.instantiate() as EnemyBase
+	add_child_autofree(enemy)
+	var visual: AnimatedSprite2D = enemy.get_node("BodyVisual") as AnimatedSprite2D
+	assert_not_null(visual)
+	assert_eq(visual.sprite_frames, frames)
+	assert_eq(visual.texture_filter, CanvasItem.TEXTURE_FILTER_NEAREST)
+	enemy.state = EnemyBase.State.WIND_UP
+	enemy._apply_state_visuals()
+	assert_eq(visual.animation, &"windup")
 
 
 func test_chaser_scene_uses_the_animated_production_visual() -> void:
