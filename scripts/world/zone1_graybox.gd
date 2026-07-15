@@ -20,11 +20,18 @@ extends Node2D
 ##   reward and records the persisted zone1_slice_complete milestone.
 
 signal boss_door_opened()
+## Emitted when the player uses the entrance exit gate (#105); the main scene
+## (#68) consumes this to travel back to the hub. Mirrors
+## Hub.zone_entry_requested.
+signal hub_return_requested()
 
 # Hand-authored corrupted-forest production atlas — provenance in
 # assets/sprites/LICENSES.md. The test-only graybox atlas remains isolated
 # under assets/sprites/testing/.
 const TILES_TEXTURE: Texture2D = preload("res://assets/sprites/world/zone1_forest_tiles.png")
+## Where the exit gate leads on the standalone F6 debug path; under the main
+## scene the owner performs the travel instead.
+const EXIT_TARGET_HUB_PATH: String = "res://scenes/world/hub.tscn"
 const TILE_SOURCE_ID: int = 0
 const TILE_SIZE: Vector2i = Vector2i(16, 16)
 const FLOOR_TILE_ATLAS_COORDS: Vector2i = Vector2i(0, 0)
@@ -64,6 +71,7 @@ const FLOOR_RECTS: Array[Rect2i] = [
 @onready var _boss: BossBase = %Boss
 @onready var _camera_limits: CameraLimits = %CameraLimits
 @onready var _respawn_controller: RespawnController = %RespawnController
+@onready var _exit_zone: InteractableZone = %ExitZone
 
 var _boss_door_open: bool = false
 
@@ -76,12 +84,27 @@ func _ready() -> void:
 	# from (issue #65); respawn teleports snap the smoothed camera along.
 	_camera_limits.apply_bounds(get_zone_bounds())
 	_respawn_controller.respawn_finished.connect(_camera_limits.snap_to_target)
+	_exit_zone.interacted.connect(_on_exit_zone_interacted)
 	for enemy: EnemyBase in get_zone_enemies():
 		enemy.set_target(_player)
 		enemy.enemy_died.connect(_on_zone_enemy_died)
 	# The boss lives outside the Enemies root on purpose: the door-unseal
 	# count stays keyed to the encounter chasers, not the fight behind it.
 	_boss.set_target(_player)
+
+
+func _on_exit_zone_interacted() -> void:
+	hub_return_requested.emit()
+	_return_to_hub_if_standalone()
+
+
+func _return_to_hub_if_standalone() -> void:
+	# DEBUG PATH: mirrors Hub._enter_target_zone_if_standalone(). Only taken
+	# when the zone is run directly with F6, where no owner exists to consume
+	# hub_return_requested, so travel directly to keep the zone explorable.
+	if get_tree().current_scene != self:
+		return
+	get_tree().change_scene_to_file.call_deferred(EXIT_TARGET_HUB_PATH)
 
 
 ## The painted tile area in world pixels — the camera never shows past it.
