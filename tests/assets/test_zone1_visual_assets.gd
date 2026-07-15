@@ -25,7 +25,7 @@ const TILE_SIZE: Vector2i = Vector2i(16, 16)
 
 
 func test_production_pngs_have_valid_signatures_and_manifest_dimensions() -> void:
-	_assert_png_dimensions(CHASER_SHEET_PATH, CHASER_TEXTURE, Vector2i(144, 240))
+	_assert_png_dimensions(CHASER_SHEET_PATH, CHASER_TEXTURE, Vector2i(192, 320))
 	_assert_png_dimensions(FOREST_ATLAS_PATH, FOREST_TEXTURE, Vector2i(128, 80))
 
 
@@ -51,7 +51,7 @@ func test_regular_enemy_roster_uses_distinct_production_sheets_and_animated_visu
 func _assert_regular_enemy_art(
 	scene: PackedScene, frames: SpriteFrames, texture: Texture2D, texture_path: String
 ) -> void:
-	_assert_png_dimensions(texture_path, texture, Vector2i(144, 240))
+	_assert_png_dimensions(texture_path, texture, Vector2i(192, 320))
 	for animation_name: StringName in [
 		&"idle_down", &"idle_up", &"idle_side", &"walk_down", &"walk_up", &"walk_side",
 		&"windup", &"attack_melee", &"hurt", &"death",
@@ -103,7 +103,13 @@ func test_chaser_selects_directional_clips_and_mirrors_the_side_facing() -> void
 
 	target.global_position = Vector2.LEFT * 64.0
 	chaser._apply_state_visuals()
+	assert_eq(visual.animation, &"walk_side")
 	assert_true(visual.flip_h)
+
+	target.global_position = Vector2.UP * 64.0
+	chaser._apply_state_visuals()
+	assert_eq(visual.animation, &"walk_up")
+	assert_false(visual.flip_h, "Non-side clips reset a stale left-facing flip.")
 
 
 func test_forest_atlas_has_manifest_category_rows() -> void:

@@ -29,9 +29,8 @@ playing = true
 
 [node name="ShieldVisual" type="Polygon2D" parent="."]
 unique_name_in_owner = true
-visible = false
 polygon = PackedVector2Array(10, -13, 16, -11, 16, 11, 10, 13)
-color = Color(0.35, 0.3, 0.24, 1)
+color = Color(0.22, 0.08, 0.28, 0.9)
 
 [node name="TellVisual" type="Polygon2D" parent="."]
 unique_name_in_owner = true

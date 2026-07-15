@@ -7,7 +7,8 @@ from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent
 enemy_dir = ROOT / "enemies"
-FRAME = 24
+FRAME = 32
+LOGICAL_FRAME = 24
 COLUMNS = 6
 ROW_ORDER = [
     "idle_down", "idle_up", "idle_side", "walk_down", "walk_up", "walk_side",
@@ -150,9 +151,38 @@ def flanker(draw: ImageDraw.ImageDraw, state: str, facing: str, phase: int) -> N
         draw.rectangle((foot_x, 15 + bob, foot_x + 2, 18 + bob), fill=DARK)
 
 
+class NativePixelDraw:
+    ## Maps the original silhouette layout onto a 32px canvas, preserving hard
+    ## pixels while giving each feature native-resolution edge detail.
+    def __init__(self, image: Image.Image) -> None:
+        self._draw = ImageDraw.Draw(image)
+
+    def _point(self, point: tuple[int, int]) -> tuple[int, int]:
+        return (round(point[0] * FRAME / LOGICAL_FRAME), round(point[1] * FRAME / LOGICAL_FRAME))
+
+    def rectangle(self, box: tuple[int, int, int, int], **kwargs: object) -> None:
+        left, top = self._point((box[0], box[1]))
+        right, bottom = self._point((box[2] + 1, box[3] + 1))
+        self._draw.rectangle((left, top, right - 1, bottom - 1), **kwargs)
+
+    def ellipse(self, box: tuple[int, int, int, int], **kwargs: object) -> None:
+        left, top = self._point((box[0], box[1]))
+        right, bottom = self._point((box[2] + 1, box[3] + 1))
+        self._draw.ellipse((left, top, right - 1, bottom - 1), **kwargs)
+
+    def polygon(self, points: list[tuple[int, int]], **kwargs: object) -> None:
+        self._draw.polygon([self._point(point) for point in points], **kwargs)
+
+    def line(self, points: tuple[int, int, int, int], **kwargs: object) -> None:
+        start = self._point((points[0], points[1]))
+        end = self._point((points[2], points[3]))
+        width: int = int(kwargs.pop("width", 1))
+        self._draw.line((start, end), width=max(1, round(width * FRAME / LOGICAL_FRAME)), **kwargs)
+
+
 def render(kind: str, state: str, facing: str, phase: int) -> Image.Image:
     image = Image.new("RGBA", (FRAME, FRAME), TRANSPARENT)
-    draw = ImageDraw.Draw(image)
+    draw = NativePixelDraw(image)
     if kind == "ranged_harasser":
         harasser(draw, state, facing, phase)
     elif kind == "shielded_brute":
