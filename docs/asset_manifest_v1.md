@@ -23,7 +23,7 @@
 
 | Asset | Target path | Frame size | Frames | Role | Source / license |
 |---|---|---|---|---|---|
-| Player sheet | `assets/sprites/player/player.png` (+ `player_frames.tres`) | 32×32 | idle 4, walk 6, dash 4, attack_melee 4 (contact f3), attack_relic 3, hurt 2, death 6 — idle/walk/dash/attacks × 3 facings | Replaces `Polygon2D` body in `player.tscn`; teal identity ramp, magenta accent | TBD |
+| Player sheet | `assets/sprites/player/player.png` (+ `player_frames.tres`) | 32×32 | idle 4, walk 6, dash 4, attack_melee 4 (contact f3), attack_relic 3, hurt 2, death 6 — idle/walk/dash/attacks × 3 facings | Replaces `Polygon2D` body in `player.tscn`; teal identity ramp, magenta accent | Hand-authored by the project team, CC0-1.0; deterministic source `assets/sprites/generate_player_art.py` (see `assets/sprites/LICENSES.md`) |
 | Melee chaser sheet | `assets/sprites/enemies/melee_chaser.png` (+ `melee_chaser_frames.tres`) | 32×32 | idle 4, walk 6, windup 3, attack_melee 3 (contact f2), hurt 2, death 5 — idle/walk × 3 facings | Replaces `BodyVisual`/`TellVisual` in `melee_chaser.tscn`; violet ramp, windup keyed `#FFC72E` | TBD |
 
 Additional v1 enemy types (DESIGN.md §8 calls for 3–4) and the Zone 1 boss get
