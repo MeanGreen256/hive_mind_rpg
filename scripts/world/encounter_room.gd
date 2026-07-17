@@ -62,6 +62,12 @@ var _exits_sealed: bool = false
 
 
 func _ready() -> void:
+	# Actor bodies moved off the default physics layer onto PLAYER_BODY (issue
+	# #128), so the inherited Area2D mask (WORLD) would never see the real
+	# player (issue #136). The trigger is a pure sensor: it scans the player
+	# body layer and occupies no layer itself.
+	collision_layer = 0
+	collision_mask = CollisionLayers.PLAYER_BODY
 	add_to_group(ENCOUNTER_ROOM_GROUP)
 	add_to_group(RespawnController.RESETTABLE_GROUP)
 	_enemies_root = get_node_or_null(enemies_root_path)
