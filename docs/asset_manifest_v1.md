@@ -37,6 +37,26 @@
 The prototype does **not** authorize a bulk replacement. Its outcome updates
 this manifest and opens the conversion issues below.
 
+### 2.2 Measured prototype decisions (issue #141)
+
+The Zone 1 entrance → encounter-room-A route now runs the HD presentation
+prototype via the zone-local `Zone1HdPresentation` helper. Measured decisions
+conversion issues may rely on:
+
+| Decision | Measured value |
+|---|---|
+| Environment source | 1024×576 wide painted plate (`assets/sprites/hd_prototype/encounter_room_background.png`), uniformly scaled 5/6 to the 480 px zone height and region-cropped so its seam lands on the room B doorway. |
+| Actor sources | Chroma-key-extracted transparent PNGs at native size: player 180×274, melee chaser 162×286, checkpoint shrine 249×330; scaled per-node to the legacy play-size footprint (34/30/44 px tall). |
+| Filtering | Per-node `TEXTURE_FILTER_LINEAR` on HD nodes only; project default filter, snapping, and legacy nearest nodes unchanged. |
+| Camera | Existing 2× camera retained. |
+| Art state | Static single-pose prototype illustrations; mechanical state (facing, hit/invuln/death feedback, enemy state, shrine lit) mirrored from the hidden legacy display drivers — no fake animation. |
+| Provenance | LemonadeAI / `Flux-2-Klein-9B-GGUF`, `flux-non-commercial-license` — **prototype-only, non-commercial, not CC0**; rows in `assets/sprites/LICENSES.md`. Production conversion art requires a compatible license. |
+
+Still **provisional pending browser data**: mipmap/compression/alpha import
+settings, atlas/rig approach, animation workflow and runtime cost, per-group
+asset dimensions beyond this screen, and Web export size/load/performance
+budgets.
+
 ## 3. Planned conversion groups
 
 ### 3.1 Player presentation
