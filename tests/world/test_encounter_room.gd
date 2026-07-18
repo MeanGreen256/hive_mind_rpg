@@ -6,6 +6,7 @@ extends GutTest
 
 const ROOM_SCENE: PackedScene = preload("res://scenes/world/encounter_room.tscn")
 const CHASER_SCENE: PackedScene = preload("res://scenes/enemies/melee_chaser.tscn")
+const PLAYER_SCENE: PackedScene = preload("res://scenes/player/player.tscn")
 
 
 class StubEnemy:
@@ -228,11 +229,11 @@ func test_player_body_physically_entering_activates_real_enemies() -> void:
 	room.get_node("Enemies").add_child(chaser)
 	add_child_autofree(room)
 	watch_signals(room)
-	var body: CharacterBody2D = CharacterBody2D.new()
+	# The real PlayerController body (on PLAYER_BODY since issue #128), not a
+	# default-layer stand-in the trigger could no longer see (issue #136). The
+	# "player" group is assigned at the placement site, so the test does too.
+	var body: PlayerController = PLAYER_SCENE.instantiate() as PlayerController
 	body.add_to_group(&"player")
-	var body_shape: CollisionShape2D = CollisionShape2D.new()
-	body_shape.shape = RectangleShape2D.new()
-	body.add_child(body_shape)
 	add_child_autofree(body)
 	body.global_position = room.global_position
 	await wait_physics_frames(3)

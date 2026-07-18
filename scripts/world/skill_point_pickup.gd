@@ -20,6 +20,12 @@ var _collected: bool = false
 
 
 func _ready() -> void:
+	# Actor bodies moved off the default physics layer onto PLAYER_BODY (issue
+	# #128), so the inherited Area2D mask (WORLD) would never see the real
+	# player (issue #136). The pickup is a pure sensor: it scans the player
+	# body layer and occupies no layer itself.
+	collision_layer = 0
+	collision_mask = CollisionLayers.PLAYER_BODY
 	add_to_group(PICKUP_GROUP)
 	if secret_id == StringName():
 		push_warning(

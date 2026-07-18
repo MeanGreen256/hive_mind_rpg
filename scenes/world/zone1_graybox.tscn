@@ -1,10 +1,17 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/zone1_graybox.gd" id="1_zone"]
+[ext_resource type="Script" path="res://scripts/world/zone1_hd_presentation.gd" id="16_hd_presentation"]
+[ext_resource type="PackedScene" path="res://scenes/world/interactable_zone.tscn" id="10_exit_zone"]
 [ext_resource type="Script" path="res://scripts/world/camera_limits.gd" id="9_camera_limits"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/world/checkpoint.tscn" id="3_checkpoint"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/melee_chaser.tscn" id="4_chaser"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/ranged_harasser.tscn" id="11_harasser"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/shielded_brute.tscn" id="12_brute"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/fast_flanker.tscn" id="13_flanker"]
+[ext_resource type="Texture2D" path="res://assets/sprites/world/zone1_props.png" id="14_props"]
+[ext_resource type="SpriteFrames" path="res://assets/sprites/world/zone1_props_frames.tres" id="15_prop_frames"]
 [ext_resource type="Script" path="res://scripts/world/respawn_controller.gd" id="5_respawn"]
 [ext_resource type="PackedScene" path="res://scenes/world/skill_point_pickup.tscn" id="6_pickup"]
 [ext_resource type="Script" path="res://scripts/world/hidden_room_reveal.gd" id="7_reveal"]
@@ -26,6 +33,105 @@ script = ExtResource("1_zone")
 unique_name_in_owner = true
 texture_filter = 1
 
+[node name="HdPresentation" type="Node2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("16_hd_presentation")
+props_root_path = NodePath("../Props")
+exit_gate_visual_path = NodePath("../ExitGateVisual")
+player_path = NodePath("../Player")
+player_visual_path = NodePath("../Player/Body")
+chaser_path = NodePath("../Enemies/ChaserRoomA")
+chaser_visual_path = NodePath("../Enemies/ChaserRoomA/BodyVisual")
+checkpoint_path = NodePath("../Checkpoints/CheckpointEntrance")
+checkpoint_visual_path = NodePath("../Checkpoints/CheckpointEntrance/Visual")
+hud_panel_path = NodePath("../Player/PlayerHud/MarginContainer/PanelContainer")
+
+[node name="Props" type="Node2D" parent="."]
+
+[node name="TreeRoomA" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(296, 144)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(0, 0, 32, 48)
+
+[node name="RootRuinRoomA" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(496, 320)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(64, 0, 32, 32)
+
+[node name="TreeRoomB" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(640, 336)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(32, 0, 32, 48)
+
+[node name="RelicMachineRoomB" type="AnimatedSprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(880, 112)
+texture_filter = 1
+sprite_frames = ExtResource("15_prop_frames")
+animation = &"glow"
+autoplay = "glow"
+
+[node name="TreeRoomC" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(1024, 320)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(0, 0, 32, 48)
+
+[node name="RelicMachineRoomC" type="AnimatedSprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(1232, 144)
+texture_filter = 1
+sprite_frames = ExtResource("15_prop_frames")
+animation = &"glow"
+autoplay = "glow"
+
+[node name="RootRuinBossApproach" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(1280, 248)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(64, 0, 32, 32)
+
+[node name="StumpCorridorWest" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(216, 248)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(0, 80, 16, 16)
+
+[node name="StoneCorridorMiddle" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(568, 248)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(16, 80, 16, 16)
+
+[node name="StumpCorridorEast" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(952, 248)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(32, 80, 16, 16)
+
+[node name="StoneAlcoveSouth" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(360, 424)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(48, 80, 16, 16)
+
+[node name="StumpAlcoveNorth" type="Sprite2D" parent="Props" groups=["zone1_props"]]
+position = Vector2(1104, 56)
+texture_filter = 1
+texture = ExtResource("14_props")
+region_enabled = true
+region_rect = Rect2(0, 80, 16, 16)
+
 [node name="PlayerSpawn" type="Marker2D" parent="."]
 unique_name_in_owner = true
 position = Vector2(88, 248)
@@ -33,6 +139,16 @@ position = Vector2(88, 248)
 [node name="ZoneEntrance" type="Marker2D" parent="."]
 unique_name_in_owner = true
 position = Vector2(40, 248)
+
+[node name="ExitGateVisual" type="Polygon2D" parent="."]
+position = Vector2(24, 248)
+polygon = PackedVector2Array(-8, -36, 8, -36, 8, 36, -8, 36)
+color = Color(0.55, 0.45, 0.65, 1)
+
+[node name="ExitZone" parent="." instance=ExtResource("10_exit_zone")]
+unique_name_in_owner = true
+position = Vector2(40, 248)
+prompt_text = "[E] Return to Hub"
 
 [node name="BossArenaAnchor" type="Marker2D" parent="."]
 unique_name_in_owner = true
@@ -102,14 +218,26 @@ unique_name_in_owner = true
 [node name="ChaserRoomA" parent="Enemies" groups=["resettable"] instance=ExtResource("4_chaser")]
 position = Vector2(408, 232)
 
+[node name="FlankerRoomA" parent="Enemies" groups=["resettable"] instance=ExtResource("13_flanker")]
+position = Vector2(360, 280)
+
 [node name="ChaserRoomB1" parent="Enemies" groups=["resettable"] instance=ExtResource("4_chaser")]
 position = Vector2(712, 168)
+
+[node name="HarasserRoomB" parent="Enemies" groups=["resettable"] instance=ExtResource("11_harasser")]
+position = Vector2(760, 248)
+
+[node name="BruteRoomB" parent="Enemies" groups=["resettable"] instance=ExtResource("12_brute")]
+position = Vector2(840, 248)
 
 [node name="ChaserRoomB2" parent="Enemies" groups=["resettable"] instance=ExtResource("4_chaser")]
 position = Vector2(808, 328)
 
 [node name="ChaserRoomC" parent="Enemies" groups=["resettable"] instance=ExtResource("4_chaser")]
 position = Vector2(1128, 280)
+
+[node name="HarasserRoomC" parent="Enemies" groups=["resettable"] instance=ExtResource("11_harasser")]
+position = Vector2(1184, 200)
 
 [node name="BossArena" type="Node2D" parent="."]
 

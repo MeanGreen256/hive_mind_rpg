@@ -17,7 +17,7 @@
 |---|---|
 | Genre | Top-down real-time action RPG (Zelda-like combat, build-driven) |
 | Perspective | Top-down |
-| Art style | 16-bit pixel art |
+| Art style | Stylized HD 2D illustration — painterly medieval materials, clean high-contrast silhouettes, soft authored lighting, cyan/magenta relic-tech emissives (pivoted from 16-bit pixel art, issue #139) |
 | Tone | Weird / surreal — a medieval world where sci-fi "magic" makes things subtly wrong |
 | Reference points | Hyper Light Drifter (tech-as-magic mood), 2D Zelda (combat feel), CrossCode (build depth in top-down 2D) |
 | Target session length | 20–40 min play sessions |
@@ -67,7 +67,7 @@ Unlock skill tree branches → develop a distinct build → clear zone boss → 
 - **Style:** Real-time action with free-angle top-down movement. Relic abilities aim in a fixed 8 directions. Dodge roll/dash has i-frames from the start.
 - **Energy:** Regenerates passively. Exact capacity, regeneration rate, and ability costs are tuning values rather than separate progression rules.
 - **Baseline kit (pre-tree):** basic melee swing, dash, one starter relic ability — the tree expands from this.
-- **Combat readability:** Accepted hits use short, attack-family-colored flashes; invulnerability pulses visibly; defeated actors retain a clear death tint. These replaceable presentation effects use real-time visual clocks and never control global time scale.
+- **Combat readability:** Accepted hits use short, attack-family-colored flashes; invulnerability pulses visibly; defeated actors retain a clear death tint. These replaceable presentation effects use real-time visual clocks and never control global time scale. Defeated enemies are pass-through: remains keep their death presentation but never block a route or trap the player.
 - **Enemy design philosophy:** Few enemy types, each with a readable tell and a distinct counter. Encounters are hand-placed combinations, not random mobs. Surreal designs (wrong geometry, glitching knights, machine-fauna) serve pillar 3.
 - **Difficulty & death:** Moderate. Death respawns you at the last checkpoint (shrine/beacon). No XP/currency loss; enemies in the area reset. Checkpoints are placed generously enough that retries stay fun.
 - **Bosses:** Each zone ends in a boss that tests that zone's lesson and pays out a large skill-point reward + unlocks a new tree tier.
@@ -139,22 +139,23 @@ Unlock skill tree branches → develop a distinct build → clear zone boss → 
 |---|---|---|
 | Engine | Godot 4.7 stable | Free, open-source, strong 2D tooling, AI-friendly GDScript; the supported project version |
 | Language | GDScript, statically typed | Fast iteration; conventions in AGENTS.md |
-| Base resolution | 640×360, integer-scaled | Crisp 16-bit pixel art, scales to 720p/1080p/4K |
-| Pixel snapping | Enabled (2D pixel snap) | Avoid pixel shimmer |
+| Base resolution | 1280×720, fractional-scaled with aspect `keep`; world camera currently zoomed 2× | **HD 2D presentation contract (issue #139):** all art readability is authored and judged against the 1280×720 output. Fractional scaling fills or letterbox-centers any window (issue #125). The 2× world camera zoom is the shipped configuration for the legacy pixel assets; no new camera zoom, source texture size, or filtering configuration is declared until the one-screen HD prototype provides evidence |
+| Pixel snapping | Enabled (2D pixel snap) — legacy, retained during migration | The shipped pixel assets need snapping to avoid shimmer; the setting stays unchanged until the HD prototype demonstrates the replacement presentation |
 | Tilemaps | Godot TileMapLayer | Native, well-documented |
 | Content data | Custom Resources (`.tres`) | Type-safe in-editor editing for skills/enemies; diffs OK in git |
 | Combat architecture | Hitbox/Hurtbox component scenes + state-machine actors | Composable across player/enemies (see AGENTS.md §5) |
 | Energy regeneration | Passive | Keeps relic abilities available without requiring melee attacks to recharge them |
-| Relic aiming | Fixed 8-direction | Predictable aiming that fits the top-down pixel-art combat presentation |
+| Relic aiming | Fixed 8-direction | Predictable aiming that fits the top-down combat presentation; unchanged by the art pivot |
 | Skill tree data | One Resource per node (id, branch, cost, prereqs, effect) | Agents can add nodes without touching UI code |
+| Skill effect availability | A node is purchasable only when its effect has a registered live consumer | Players never spend scarce points on inert effects; future authored nodes remain unavailable until implemented |
 | Save format | JSON via `FileAccess` in `user://` | Simple, debuggable |
 
 ---
 
 ## 10. Art & Audio Direction
 
-- **Art:** 16-bit pixel art. Medieval palette corrupted by tech: cold neon accents (cyan/magenta) against earthy tones; glitch/dither effects near relic tech. Canonical direction: `docs/visual_bible.md` + `docs/asset_manifest_v1.md`; in-engine palette proof: `scenes/reference/visual_reference_sheet.tscn`; reference imagery collects in `assets/reference/`.
-- **Pipeline:** Start with free/CC0 asset packs for graybox + placeholder (e.g., Kenney), replace with custom sprites as style locks. Every asset's source/license logged per AGENTS.md §11.
+- **Art:** Stylized HD 2D illustration (issue #139). Painterly, hand-worn medieval materials in a low-saturation earthy palette, broken by bright cyan/magenta relic-tech emissives; clean high-contrast silhouettes, soft authored top-down lighting, smooth animation. Not 3D realism and not upscaled pixel art. Canonical direction: `docs/visual_bible.md` + `docs/asset_manifest_v1.md`; in-engine palette proof: `scenes/reference/visual_reference_sheet.tscn` (pixel-era readability strip is legacy); reference imagery collects in `assets/reference/`.
+- **Pipeline:** The shipped 16-bit pixel assets are the playable legacy layer during migration. A one-screen HD prototype locks the concrete technical art contracts (sizes, filtering, camera, animation approach, budget) before per-group conversion passes replace legacy assets. Every asset's source/license logged per AGENTS.md §11.
 - **Audio:** Ambient drones + medieval instrumentation with synthetic artifacts; combat SFX punchy and readable. Placeholder-first.
 
 ---
@@ -177,3 +178,5 @@ Unlock skill tree branches → develop a distinct build → clear zone boss → 
 | 2026-07-11 | 0.3 | Locked passive Energy regeneration and fixed 8-direction relic aiming | Codex + MeanGreen256 |
 | 2026-07-11 | 0.4 | Locked Zone 1 theme as a corrupted forest | Codex + MeanGreen256 |
 | 2026-07-13 | 0.5 | Linked canonical v1 visual bible, asset manifest, and reference sheet (issue #82) | Claude + pj200105 |
+| 2026-07-13 | 0.6 | Required live runtime consumers for purchasable skill effects (issue #77) | Codex + MeanGreen256 |
+| 2026-07-17 | 0.7 | Pivoted art direction to stylized HD 2D illustration; pixel-art contracts reclassified as legacy implementation pending the one-screen prototype (issue #139) | Claude + pj200105 |

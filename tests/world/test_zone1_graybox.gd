@@ -169,10 +169,57 @@ func test_zone_enemies_stand_on_floor_and_target_the_player() -> void:
 	var player: PlayerController = zone.get_node("Player") as PlayerController
 	var zone_enemies: Array[EnemyBase] = zone.get_zone_enemies()
 
-	assert_gte(zone_enemies.size(), 4, "Each encounter room is populated.")
+	assert_gte(zone_enemies.size(), 7, "The three authored encounter rooms use the full regular roster.")
+	var has_chaser: bool = false
+	var has_harasser: bool = false
+	var has_brute: bool = false
+	var has_flanker: bool = false
 	for enemy: EnemyBase in zone_enemies:
+		has_chaser = has_chaser or not (
+			enemy is RangedHarasser or enemy is ShieldedBrute or enemy is FastFlanker
+		)
+		has_harasser = has_harasser or enemy is RangedHarasser
+		has_brute = has_brute or enemy is ShieldedBrute
+		has_flanker = has_flanker or enemy is FastFlanker
 		assert_eq(enemy.target, player, "%s should hunt the player." % enemy.name)
 		assert_false(zone.is_wall_cell(_cell_of(zone, enemy.global_position)))
+	assert_true(has_chaser, "Zone 1 retains the melee chaser baseline.")
+	assert_true(has_harasser, "Zone 1 includes a ranged harasser encounter.")
+	assert_true(has_brute, "Zone 1 includes a shielded brute encounter.")
+	assert_true(has_flanker, "Zone 1 includes a fast flanker encounter.")
+
+
+func test_zone_props_are_authored_non_colliding_set_dressing() -> void:
+	var zone: Zone1Graybox = _add_zone()
+	var props: Array[CanvasItem] = zone.get_zone_props()
+	var player: PlayerController = zone.get_node("Player") as PlayerController
+	var named_route_props: Array[StringName] = [
+		&"StumpCorridorWest", &"StoneCorridorMiddle", &"StumpCorridorEast",
+		&"StoneAlcoveSouth", &"StumpAlcoveNorth",
+	]
+
+	assert_gte(props.size(), 12, "Rooms, corridors, secrets, and the boss approach need set dressing.")
+	for prop: CanvasItem in props:
+		var prop_node: Node2D = prop as Node2D
+		assert_not_null(prop_node)
+		assert_eq(prop.texture_filter, CanvasItem.TEXTURE_FILTER_NEAREST)
+		assert_false(zone.is_wall_cell(_cell_of(zone, prop_node.global_position)))
+		assert_gte(prop_node.global_position.distance_to(player.global_position), 48.0)
+		for enemy: EnemyBase in zone.get_zone_enemies():
+			assert_gte(
+				prop_node.global_position.distance_to(enemy.global_position), 48.0,
+				"%s must not obscure an enemy spawn." % prop.name
+			)
+	for prop_name: StringName in named_route_props:
+		assert_not_null(zone.get_node_or_null(NodePath("Props/%s" % prop_name)), "%s is required." % prop_name)
+
+	for machine_name: StringName in [&"RelicMachineRoomB", &"RelicMachineRoomC"]:
+		var machine: AnimatedSprite2D = zone.get_node(NodePath("Props/%s" % machine_name)) as AnimatedSprite2D
+		assert_not_null(machine)
+		if machine != null:
+			assert_eq(machine.sprite_frames, preload("res://assets/sprites/world/zone1_props_frames.tres"))
+			assert_eq(machine.animation, &"glow")
+			assert_true(machine.is_playing())
 
 
 func test_boss_door_starts_sealed_and_opens_on_request() -> void:
@@ -303,4 +350,20 @@ func test_collected_secrets_award_points_and_stay_gone_after_reload() -> void:
 	assert_eq(
 		reloaded_zone.get_secret_pickups().size(), 0,
 		"Collected secrets never respawn on reload."
+	)
+
+
+func test_exit_gate_emits_hub_return_request_on_interact() -> void:
+	var zone: Zone1Graybox = _add_zone()
+	var exit_zone: InteractableZone = zone.get_node_or_null("%ExitZone") as InteractableZone
+	assert_not_null(exit_zone, "Zone 1 has an in-world exit gate at its entrance (#105).")
+	if exit_zone == null:
+		return
+
+	watch_signals(zone)
+	exit_zone.interact()
+
+	assert_signal_emitted(
+		zone, "hub_return_requested",
+		"The exit gate raises the typed return request for the owner (#68) to consume."
 	)

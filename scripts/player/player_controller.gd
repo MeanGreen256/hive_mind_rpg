@@ -11,11 +11,14 @@ signal melee_swing_started(direction: Vector2)
 signal melee_swing_ended()
 signal relic_ability_fired(direction: Vector2)
 signal relic_ability_blocked()
+signal tree_ability_used(ability_id: StringName)
+signal tree_ability_blocked(ability_id: StringName)
 signal skill_effects_refreshed()
 signal control_enabled_changed(enabled: bool)
 
 ## Ability id the starter bolt's ABILITY_MODIFIER skill nodes target.
 const RELIC_BOLT_ABILITY_ID: StringName = &"starter_relic_bolt"
+const SHORT_TELEPORT_ABILITY_ID: StringName = &"short_teleport"
 const ATTACK_STAT: StringName = &"attack"
 const BOLT_DAMAGE_STAT: StringName = &"damage"
 const MAX_HP_STAT: StringName = &"max_hp"
@@ -66,6 +69,8 @@ var _hitstop_generation: int = 0
 
 
 func _ready() -> void:
+	collision_layer = CollisionLayers.PLAYER_BODY
+	collision_mask = CollisionLayers.WORLD
 	_movement = PlayerMovementStateMachine.new(
 		move_speed,
 		acceleration,
@@ -118,6 +123,8 @@ func _physics_process(delta: float) -> void:
 		try_melee_attack()
 	if _control_enabled and Input.is_action_just_pressed(&"ability_relic"):
 		try_relic_ability()
+	if _control_enabled and Input.is_action_just_pressed(&"ability_utility"):
+		try_use_ability(SHORT_TELEPORT_ABILITY_ID)
 	_melee.update(delta)
 
 
@@ -172,6 +179,50 @@ func try_relic_ability() -> bool:
 	_body_visual.play_relic(aim_direction)
 	relic_ability_fired.emit(aim_direction)
 	return true
+
+
+## Typed dispatch point for abilities granted by UNLOCK_ABILITY skill nodes.
+## Input and future UI loadouts call this API rather than hardcoding scenes.
+func try_use_ability(ability_id: StringName) -> bool:
+	if not _control_enabled:
+		return false
+	var ability_node: SkillNode = _get_unlocked_ability_node(ability_id)
+	if ability_node == null or not PlayerSkillEffectRegistry.supports(ability_node):
+		tree_ability_blocked.emit(ability_id)
+		return false
+	match ability_id:
+		SHORT_TELEPORT_ABILITY_ID:
+			return _try_short_teleport(ability_node)
+	tree_ability_blocked.emit(ability_id)
+	return false
+
+
+func _try_short_teleport(ability_node: SkillNode) -> bool:
+	var energy_cost: float = float(ability_node.effect_parameters.get(&"energy_cost", 0.0))
+	var distance: float = float(ability_node.effect_parameters.get(&"distance_bonus", 0.0))
+	var direction: Vector2 = snap_to_eight_directions(_movement.last_move_direction)
+	var displacement: Vector2 = direction * distance
+	if distance <= 0.0 or test_move(global_transform, displacement):
+		tree_ability_blocked.emit(ability_node.effect_parameters[&"ability_id"])
+		return false
+	if not energy.spend(energy_cost):
+		tree_ability_blocked.emit(ability_node.effect_parameters[&"ability_id"])
+		return false
+	global_position += displacement
+	_body_visual.play_relic(direction)
+	AudioManager.play_sfx(&"relic_cast")
+	tree_ability_used.emit(ability_node.effect_parameters[&"ability_id"])
+	return true
+
+
+func _get_unlocked_ability_node(ability_id: StringName) -> SkillNode:
+	for skill_id: StringName in GameState.get_unlocked_skill_ids():
+		var skill: SkillNode = GameState.skill_tree.get_node(skill_id)
+		if skill == null or skill.effect_type != SkillNode.EffectType.UNLOCK_ABILITY:
+			continue
+		if skill.effect_parameters.get(&"ability_id") == ability_id:
+			return skill
+	return null
 
 
 func get_effective_melee_damage() -> int:
@@ -237,6 +288,7 @@ func _on_movement_state_changed(
 func _on_dash_started() -> void:
 	_hurtbox.set_enabled(false)
 	_body_visual.play_dash(_movement.last_move_direction)
+	CombatFxSpawner.spawn_dash_trail(get_parent(), global_position, _movement.last_move_direction)
 	AudioManager.play_sfx(&"dash")
 	dash_started.emit()
 
@@ -250,6 +302,7 @@ func _on_dash_ended() -> void:
 func _on_melee_swing_started(direction: Vector2) -> void:
 	_melee_hitbox.position = direction * melee_hitbox_offset
 	_body_visual.play_melee(direction)
+	CombatFxSpawner.spawn_slash(get_parent(), global_position + direction * melee_hitbox_offset, direction)
 	# Deferred: physics properties cannot safely change while an overlap query is flushing.
 	_melee_hitbox.set_deferred("monitoring", true)
 	AudioManager.play_sfx(&"melee_swing")
