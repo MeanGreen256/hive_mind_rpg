@@ -86,6 +86,7 @@ var _hidden_legacy_scenery: Array[CanvasItem] = []
 var _background_sprite: Sprite2D
 var _player_sprite: Sprite2D
 var _chaser_sprite: Sprite2D
+var _uses_prototype_chaser_fallback: bool = false
 var _shrine_sprite: Sprite2D
 
 
@@ -125,10 +126,19 @@ func _ready() -> void:
 			_player, _player_legacy_visual, PLAYER_TEXTURE,
 			PLAYER_VISUAL_HEIGHT_PX, PLAYER_VISUAL_OFFSET
 		)
-	_chaser_sprite = _install_actor_sprite(
-		_chaser, _chaser_legacy_visual, CHASER_TEXTURE,
-		CHASER_VISUAL_HEIGHT_PX, Vector2.ZERO
+	# The production regular-enemy pass owns the roster body. Retain the old
+	# prototype hound only as a compatibility fallback for stripped fixtures.
+	var roster_presentation: EnemyHdPresentation = (
+		_chaser.get_node_or_null("HdPresentation") as EnemyHdPresentation
 	)
+	if roster_presentation != null:
+		_chaser_sprite = roster_presentation.get_body_sprite()
+	else:
+		_uses_prototype_chaser_fallback = true
+		_chaser_sprite = _install_actor_sprite(
+			_chaser, _chaser_legacy_visual, CHASER_TEXTURE,
+			CHASER_VISUAL_HEIGHT_PX, Vector2.ZERO
+		)
 	_shrine_sprite = _install_actor_sprite(
 		_checkpoint, _checkpoint_legacy_visual, SHRINE_TEXTURE,
 		SHRINE_VISUAL_HEIGHT_PX, SHRINE_VISUAL_OFFSET
@@ -144,9 +154,10 @@ func _process(_delta: float) -> void:
 	# feedback honest on the static HD art without touching those systems.
 	_player_sprite.flip_h = _player_legacy_visual.flip_h
 	_player_sprite.self_modulate = _player_legacy_visual.self_modulate
-	_chaser_sprite.flip_h = _chaser_legacy_visual.flip_h
-	_chaser_sprite.self_modulate = _chaser_legacy_visual.self_modulate
-	_chaser_sprite.modulate = state_tint_for(_chaser.state)
+	if _uses_prototype_chaser_fallback:
+		_chaser_sprite.flip_h = _chaser_legacy_visual.flip_h
+		_chaser_sprite.self_modulate = _chaser_legacy_visual.self_modulate
+		_chaser_sprite.modulate = state_tint_for(_chaser.state)
 
 
 ## Semantic state color for a static enemy body, mirroring the Polygon2D-enemy
@@ -175,6 +186,15 @@ func get_player_sprite() -> Sprite2D:
 
 
 func get_chaser_sprite() -> Sprite2D:
+	# HdPresentation is ordered before Enemies in the zone scene, so the
+	# roster adapter can exist while its dynamically built Body is not ready
+	# yet. Resolve lazily after the scene's full ready cascade.
+	if _chaser_sprite == null and is_instance_valid(_chaser):
+		var roster_presentation: EnemyHdPresentation = (
+			_chaser.get_node_or_null("HdPresentation") as EnemyHdPresentation
+		)
+		if roster_presentation != null:
+			_chaser_sprite = roster_presentation.get_body_sprite()
 	return _chaser_sprite
 
 
@@ -183,7 +203,7 @@ func get_shrine_sprite() -> Sprite2D:
 
 
 func get_hd_sprites() -> Array[Sprite2D]:
-	return [_background_sprite, _player_sprite, _chaser_sprite, _shrine_sprite]
+	return [_background_sprite, _player_sprite, get_chaser_sprite(), _shrine_sprite]
 
 
 ## Display-only legacy scenery hidden because it sits under the painted

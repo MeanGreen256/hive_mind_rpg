@@ -219,8 +219,8 @@ func test_all_hd_nodes_use_per_node_linear_filtering_only() -> void:
 			sprite.texture_filter, CanvasItem.TEXTURE_FILTER_LINEAR,
 			"%s must filter linearly per-node." % sprite.name
 		)
-	# The prototype must not flip the project or legacy nodes to linear:
-	# untouched nodes keep their explicit nearest filter.
+	# The production adapter must not flip the project or hidden legacy state
+	# drivers to linear: they keep their explicit nearest filter.
 	var floor_walls: TileMapLayer = zone.get_node("FloorWalls") as TileMapLayer
 	assert_eq(floor_walls.texture_filter, CanvasItem.TEXTURE_FILTER_NEAREST)
 	var other_chaser_visual: AnimatedSprite2D = (
@@ -247,11 +247,13 @@ func test_only_selected_legacy_display_nodes_are_hidden_and_only_visually() -> v
 	assert_not_null(player_body.sprite_frames)
 	assert_not_null(chaser_visual.sprite_frames)
 
-	# Unselected actors keep their legacy presentation.
+	# Other regular enemies now carry their own production HD adapter; their
+	# legacy visuals remain hidden state drivers rather than drawing twice.
 	var other_chaser_visual: AnimatedSprite2D = (
 		zone.get_node("Enemies/ChaserRoomB1/BodyVisual") as AnimatedSprite2D
 	)
-	assert_true(other_chaser_visual.visible)
+	assert_false(other_chaser_visual.visible)
+	assert_not_null(zone.get_node("Enemies/ChaserRoomB1/HdPresentation"))
 	var other_shrine_visual: Polygon2D = (
 		zone.get_node("Checkpoints/CheckpointRoomC/Visual") as Polygon2D
 	)
@@ -264,7 +266,7 @@ func test_only_selected_legacy_display_nodes_are_hidden_and_only_visually() -> v
 		"Zone 1 must reuse the player-wide HD display instead of adding a duplicate body."
 	)
 	assert_eq(
-		presentation.get_chaser_sprite().get_parent(),
+		presentation.get_chaser_sprite().get_parent().get_parent(),
 		zone.get_node("Enemies/ChaserRoomA")
 	)
 	assert_eq(
@@ -325,10 +327,14 @@ func test_live_mechanical_signals_mirror_onto_static_hd_art() -> void:
 	player_body.self_modulate = flash_tint
 	chaser.state = EnemyBase.State.WIND_UP
 	presentation._process(0.0)
+	var enemy_presentation: EnemyHdPresentation = (
+		chaser.get_node("HdPresentation") as EnemyHdPresentation
+	)
+	enemy_presentation._process(0.0)
 
 	assert_true(presentation.get_player_sprite().flip_h)
 	assert_eq(presentation.get_player_sprite().self_modulate, flash_tint)
-	assert_eq(presentation.get_chaser_sprite().modulate, EnemyBase.WIND_UP_COLOR)
+	assert_eq(enemy_presentation.get_body_sprite().modulate, EnemyBase.WIND_UP_COLOR)
 	assert_eq(
 		Zone1HdPresentation.state_tint_for(EnemyBase.State.DEAD), EnemyBase.DEAD_COLOR
 	)

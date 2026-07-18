@@ -82,7 +82,7 @@ phone smoke test before merge.
 
 | Group | Scope | Non-goals |
 |---|---|---|
-| Regular enemy roster | Distinct illustrated identities, directional/telegraph/death presentation, and readability validation for each v1 enemy. | AI, attacks, damage, ranges, collision, rewards, or encounter composition. |
+| Regular enemy roster | **Production conversion in issue #154:** four distinct transparent illustrated bodies under `assets/sprites/enemies/hd/`; scene-local adapters mirror live facing, telegraph, hit, death, and shield state while legacy SpriteFrames remain hidden mechanical drivers. | AI, attacks, damage, ranges, collision, rewards, or encounter composition. |
 | Zone boss | Illustrated boss body, phase/readability cues, arena-facing presentation, and boss-specific FX. | Boss logic, phase thresholds, rewards, arena collision, or progression. |
 
 ### 3.3 Zone 1 environment and interactables
@@ -99,6 +99,14 @@ phone smoke test before merge.
 | UI skin and typography | HUD, skill tree, prompts, panels, icons, and accessibility/readability treatment. | UI layout behavior, skill costs, input flow, pause behavior, or save state. |
 | Combat and relic FX | Attacks, impacts, dash/relic feedback, projectiles, enemy telegraphs, and death presentation. | Damage, hitboxes/hurtboxes, hitstop, timing, AI, or time-scale ownership. |
 
+Issue #154 desktop Web evidence used the production `1280×720` canvas and the
+real Zone 1 route. All four bodies remained distinct at the shipped 2× camera;
+the ranged mask/relic, brute shield, flanker limbs, and chaser quadruped profile
+read without changing their collision footprints. The release/no-threads Web
+export kept `index.wasm` at 39,509,339 bytes and produced a 6,712,544-byte PCK,
+a +475,136-byte delta from the issue #149 baseline — below the 2 MiB review
+threshold. Browser console inspection reported no warnings or errors.
+
 ## 4. Legacy inventory
 
 The following are retained during migration and may be replaced only by their
@@ -107,7 +115,7 @@ focused group issue after prototype decisions land:
 | Legacy group | Current location | Transition status |
 |---|---|---|
 | Player pixel sheet and SpriteFrames | `assets/sprites/player/`, `scenes/player/` | Functional legacy presentation. |
-| Enemy pixel sheets and frames | `assets/sprites/enemies/`, `scenes/enemies/` | Functional legacy presentation. |
+| Enemy pixel sheets and frames | `assets/sprites/enemies/`, `scenes/enemies/` | Retained as hidden state/animation drivers behind the production HD regular-enemy bodies (issue #154). |
 | Zone 1 forest/properties | `assets/sprites/world/`, `scenes/world/` | Functional legacy presentation. |
 | Combat/projectile sheets | `assets/sprites/fx/`, combat/player scenes | Functional legacy presentation. |
 | Pixel-era reference sheet and test textures | `scenes/reference/`, `assets/sprites/testing/` | Retained until HD readability/reference coverage replaces their role. |
