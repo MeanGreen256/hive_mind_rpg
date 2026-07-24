@@ -78,7 +78,11 @@ func test_weapon_atlas_is_a_documented_png_with_hd_import_rules() -> void:
 		return
 	assert_eq(file.get_buffer(PNG_SIGNATURE.size()), PNG_SIGNATURE)
 	file.close()
-	assert_eq(Vector2i(WEAPON_ATLAS.get_width(), WEAPON_ATLAS.get_height()), Vector2i(512, 128))
+	assert_eq(
+		Vector2i(WEAPON_ATLAS.get_width(), WEAPON_ATLAS.get_height()),
+		Vector2i(1024, 128),
+		"The attack atlas has held, wind-up, contact, and recovery cells.",
+	)
 	var import_text: String = FileAccess.get_file_as_string(ATLAS_PATH + ".import")
 	assert_string_contains(import_text, "compress/mode=0")
 	assert_string_contains(import_text, "mipmaps/generate=false")
@@ -86,14 +90,20 @@ func test_weapon_atlas_is_a_documented_png_with_hd_import_rules() -> void:
 	assert_string_contains(import_text, "process/fix_alpha_border=true")
 
 
-func test_swing_cell_is_authored_art_distinct_from_the_held_cell() -> void:
+func test_attack_phase_cells_are_authored_art_distinct_from_the_held_cell() -> void:
 	var image: Image = WEAPON_ATLAS.get_image()
 	var cell: Vector2i = Vector2i(PlayerWeaponHdPresentation.CELL_SIZE)
 	var held_pixels: int = _opaque_pixel_count(image, Rect2i(Vector2i.ZERO, cell))
-	var swing_pixels: int = _opaque_pixel_count(image, Rect2i(Vector2i(cell.x, 0), cell))
+	var windup_pixels: int = _opaque_pixel_count(image, Rect2i(Vector2i(cell.x, 0), cell))
+	var contact_pixels: int = _opaque_pixel_count(image, Rect2i(Vector2i(cell.x * 2, 0), cell))
+	var recovery_pixels: int = _opaque_pixel_count(image, Rect2i(Vector2i(cell.x * 3, 0), cell))
 	assert_gt(held_pixels, 0, "Held cell must contain authored pixels.")
-	assert_gt(swing_pixels, held_pixels,
-		"Swing cell adds authored smear/edge pixels, so it can never be a copy of the held cell.")
+	assert_gt(windup_pixels, held_pixels,
+		"Wind-up adds a restrained anticipation trail behind the held silhouette.")
+	assert_gt(contact_pixels, windup_pixels,
+		"Contact has the largest authored impact flash and leading edge.")
+	assert_gt(recovery_pixels, held_pixels,
+		"Recovery retains a fading follow-through trail rather than popping back to held art.")
 
 
 func test_idle_and_move_hold_the_weapon_while_melee_swings_it() -> void:
@@ -109,7 +119,7 @@ func test_idle_and_move_hold_the_weapon_while_melee_swings_it() -> void:
 
 	_legacy_visual.play_melee(Vector2.RIGHT)
 	_presentation._process(0.0)
-	assert_eq(_weapon.region_rect, PlayerWeaponHdPresentation.SWING_REGION)
+	assert_eq(_weapon.region_rect, PlayerWeaponHdPresentation.WINDUP_REGION)
 	assert_ne(_weapon.rotation, rest_rotation,
 		"Melee pose must differ from the idle/move rest pose.")
 
@@ -137,26 +147,37 @@ func test_rest_pose_follows_facing_for_all_four_directions() -> void:
 			assert_eq(_weapon.z_index, PlayerWeaponHdPresentation.WEAPON_Z_FRONT)
 
 
-func test_melee_sweep_is_directionally_truthful_for_all_four_facings() -> void:
+func test_melee_has_hand_anchored_windup_contact_and_recovery_for_all_four_facings() -> void:
 	var half_arc: float = deg_to_rad(PlayerWeaponHdPresentation.SWING_ARC_DEGREES) * 0.5
-	var half_sweep: float = PlayerWeaponHdPresentation.SWING_SWEEP_SECONDS * 0.5
 	for expectation: Array in FACING_EXPECTATIONS:
 		var facing: StringName = expectation[1] as StringName
 		var facing_angle: float = expectation[2] as float
 		var tilt_sign: float = PlayerWeaponHdPresentation.FACING_TILT_SIGNS[facing]
 		_legacy_visual.play_melee(expectation[0] as Vector2)
 		_presentation._process(0.0)
-		assert_eq(_weapon.region_rect, PlayerWeaponHdPresentation.SWING_REGION)
+		assert_eq(_weapon.region_rect, PlayerWeaponHdPresentation.WINDUP_REGION)
 		assert_eq(_weapon.flip_v, tilt_sign < 0.0,
 			"Mirrored sweeps flip the authored leading edge onto the leading side.")
 		assert_almost_eq(_weapon.rotation, facing_angle - tilt_sign * half_arc, 0.001,
 			"%s swing must start on the wind-up side of the facing" % facing)
-		_presentation._process(half_sweep)
+		assert_eq(_weapon.position, PlayerWeaponHdPresentation.HAND_ANCHORS[facing],
+			"%s wind-up remains pivoted at its authored hand anchor" % facing)
+
+		_presentation._process(PlayerWeaponHdPresentation.WINDUP_SECONDS)
+		assert_eq(_weapon.region_rect, PlayerWeaponHdPresentation.CONTACT_REGION,
+			"%s must change to its authored contact pose after wind-up" % facing)
+		assert_eq(_weapon.position, PlayerWeaponHdPresentation.HAND_ANCHORS[facing])
+		_presentation._process(PlayerWeaponHdPresentation.CONTACT_SECONDS * 0.5)
 		assert_almost_eq(_weapon.rotation, facing_angle, 0.001,
-			"%s mid-swing must cross the exact play_melee facing angle" % facing)
-		_presentation._process(half_sweep)
+			"%s contact must cross the exact play_melee facing angle" % facing)
+
+		_presentation._process(PlayerWeaponHdPresentation.CONTACT_SECONDS * 0.5)
+		assert_eq(_weapon.region_rect, PlayerWeaponHdPresentation.RECOVERY_REGION,
+			"%s must enter recovery instead of holding the contact pose" % facing)
+		assert_eq(_weapon.position, PlayerWeaponHdPresentation.HAND_ANCHORS[facing])
+		_presentation._process(PlayerWeaponHdPresentation.RECOVERY_SECONDS)
 		assert_almost_eq(_weapon.rotation, facing_angle + tilt_sign * half_arc, 0.001,
-			"%s swing must finish on the follow-through side and clamp there" % facing)
+			"%s recovery must finish on the follow-through side and clamp there" % facing)
 		_presentation._process(1.0)
 		assert_almost_eq(_weapon.rotation, facing_angle + tilt_sign * half_arc, 0.001)
 		# Return to idle the same way the real clip does before the next facing.
@@ -197,6 +218,14 @@ func test_melee_keeps_a_single_slash_fx_owner() -> void:
 func test_weapon_layer_leaves_melee_mechanics_and_collision_unchanged() -> void:
 	assert_eq(_player.melee_damage, 1)
 	assert_eq(_player.melee_duration, 0.12)
+	assert_almost_eq(
+		PlayerWeaponHdPresentation.WINDUP_SECONDS
+		+ PlayerWeaponHdPresentation.CONTACT_SECONDS
+		+ PlayerWeaponHdPresentation.RECOVERY_SECONDS,
+		_player.melee_duration,
+		0.0001,
+		"Presentation phases must consume exactly the existing melee duration.",
+	)
 	assert_eq(_player.melee_hitbox_offset, 14.0)
 	var hitbox: Hitbox = _player.get_node("MeleeHitbox") as Hitbox
 	var hitbox_shape: RectangleShape2D = (
