@@ -14,13 +14,13 @@ const ATLAS_CELL_SIZE: Vector2 = Vector2(256.0, 256.0)
 ## Opaque art height inside every atlas cell (curation contract in
 ## tools/curate_player_directional_atlas.py); the rest is safe transparent border.
 const ATLAS_CONTENT_HEIGHT_PX: float = 190.0
-## Facing label → atlas column. West is authored art (mirrored side pose baked
-## into the atlas), not a runtime flip, so all four reads stay distinct.
+## Facing label → atlas column. The authored side cells are ordered west then
+## east (the original east/west labels were reversed); neither is a runtime flip.
 const DIRECTION_ATLAS_COLUMNS: Dictionary[StringName, int] = {
 	&"north": 0,
-	&"east": 1,
+	&"east": 3,
 	&"south": 2,
-	&"west": 3,
+	&"west": 1,
 }
 const DISPLAY_HEIGHT_PX: float = 42.0
 const BODY_POSITION: Vector2 = Vector2(0.0, -10.0)
