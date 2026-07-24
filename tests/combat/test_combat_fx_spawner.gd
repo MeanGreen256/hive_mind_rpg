@@ -17,6 +17,27 @@ func test_combat_effects_have_authored_frame_counts_and_do_not_loop() -> void:
 	_assert_effect(CombatFxSpawner.DISSOLVE, 6)
 
 
+func test_combat_one_shots_keep_legacy_timing_and_self_clean() -> void:
+	var parent: Node2D = Node2D.new()
+	add_child_autofree(parent)
+	CombatFxSpawner.spawn_slash(parent, Vector2.ZERO, Vector2.RIGHT)
+	CombatFxSpawner.spawn_spark(parent, Vector2.ZERO)
+	CombatFxSpawner.spawn_dash_trail(parent, Vector2.ZERO, Vector2.RIGHT)
+	CombatFxSpawner.spawn_dissolve(parent, Vector2.ZERO)
+
+	assert_eq(_animated_fx_count(parent), 4)
+	for effect: AnimatedSprite2D in _animated_fx_children(parent):
+		assert_eq(
+			effect.sprite_frames.get_animation_speed(effect.animation),
+			CombatFxSpawner.COMBAT_FPS,
+			"Combat FX retain the legacy 12 FPS presentation lifetime."
+		)
+
+	# The longest combat one-shot is the six-frame dissolve: 6 / 12 = 0.5 s.
+	await get_tree().create_timer(0.6).timeout
+	assert_eq(_animated_fx_count(parent), 0, "Every one-shot FX frees itself after animation_finished.")
+
+
 func test_relic_flight_loops_and_reads_from_the_hd_sheet() -> void:
 	var visual: AnimatedSprite2D = CombatFxSpawner.create_relic_flight_visual(Vector2.RIGHT)
 	autofree(visual)
@@ -100,6 +121,14 @@ func _assert_effect(animation_name: StringName, expected_frames: int) -> void:
 	var first_frame: AtlasTexture = effect.sprite_frames.get_frame_texture(animation_name, 0) as AtlasTexture
 	assert_not_null(first_frame)
 	assert_eq(first_frame.atlas, COMBAT_TEXTURE, "HD combat effects read from the shared HD sheet.")
+
+
+func _animated_fx_children(parent: Node2D) -> Array[AnimatedSprite2D]:
+	var effects: Array[AnimatedSprite2D] = []
+	for child: Node in parent.get_children():
+		if child is AnimatedSprite2D:
+			effects.append(child as AnimatedSprite2D)
+	return effects
 
 
 func _animated_fx_count(parent: Node2D) -> int:

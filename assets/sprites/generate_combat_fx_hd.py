@@ -11,9 +11,11 @@ Layout of assets/sprites/fx/combat_fx_hd.png (384x256, straight alpha), uniform
   row y=192 : death dissolve, 6 frames - ash motes lifting into a magenta
               corruption fringe
 
-Every pixel is computed from closed-form math (no randomness, no external source
-imagery), so reruns are byte-identical and the output is CC0-safe hand-authored
-art. Colors follow the visual-bible combat language: warm gold wind-up/slash,
+Every decoded pixel is computed from closed-form math (no randomness, no external
+source imagery), so reruns have deterministic RGBA content and the output is
+CC0-safe hand-authored art. PNG byte serialization may vary across Pillow
+versions; validate decoded pixels rather than a file hash. Colors follow the
+visual-bible combat language: warm gold wind-up/slash,
 white-hot contact, cyan dash energy, and dark-neutral ash resolving to a
 restrained magenta corruption fringe on defeat.
 """
