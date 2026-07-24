@@ -1,6 +1,6 @@
 class_name PlayerWeaponHdPresentation
 extends Sprite2D
-## Presentation-only steel weapon display for issue #168. PlayerHdPresentation
+## Presentation-only steel weapon display for issues #168/#184. PlayerHdPresentation
 ## owns and drives this sprite from the live PlayerVisual facing/action state;
 ## it never touches PlayerController, PlayerMeleeAttack, the melee hitbox, or
 ## any gameplay timing. The atlas is deterministic CC0 art authored pointing +x
@@ -11,7 +11,9 @@ const WEAPON_TEXTURE: Texture2D = preload("res://assets/sprites/player/hd/steel_
 const HD_TEXTURE_FILTER: CanvasItem.TextureFilter = CanvasItem.TEXTURE_FILTER_LINEAR
 const CELL_SIZE: Vector2 = Vector2(256.0, 128.0)
 const HELD_REGION: Rect2 = Rect2(Vector2.ZERO, CELL_SIZE)
-const SWING_REGION: Rect2 = Rect2(Vector2(256.0, 0.0), CELL_SIZE)
+const WINDUP_REGION: Rect2 = Rect2(Vector2(256.0, 0.0), CELL_SIZE)
+const CONTACT_REGION: Rect2 = Rect2(Vector2(512.0, 0.0), CELL_SIZE)
+const RECOVERY_REGION: Rect2 = Rect2(Vector2(768.0, 0.0), CELL_SIZE)
 ## Grip-center pixel inside each cell; the sprite offset moves it onto the node
 ## origin so rotation pivots at the wielding hand.
 const HILT_PIVOT_X_PX: float = 24.0
@@ -50,9 +52,12 @@ const FACING_TILT_SIGNS: Dictionary[StringName, float] = {
 	&"south": 1.0,
 	&"west": -1.0,
 }
-## Presentation-only sweep pacing that mirrors the melee clip length; gameplay
-## swing timing stays owned by PlayerMeleeAttack and is never read or written.
+## Presentation-only attack phases exactly partition the existing melee clip;
+## gameplay swing timing stays owned by PlayerMeleeAttack and is never read or written.
 const SWING_SWEEP_SECONDS: float = 0.12
+const WINDUP_SECONDS: float = 0.04
+const CONTACT_SECONDS: float = 0.04
+const RECOVERY_SECONDS: float = 0.04
 ## North-facing swings read behind the body; every other facing in front.
 const BEHIND_BODY_FACING: StringName = &"north"
 const WEAPON_Z_BEHIND: int = -1
@@ -86,9 +91,16 @@ func update_presentation(
 	var tilt_sign: float = FACING_TILT_SIGNS.get(facing, 1.0)
 	position = HAND_ANCHORS.get(facing, HAND_ANCHORS[&"south"])
 	z_index = WEAPON_Z_BEHIND if facing == BEHIND_BODY_FACING else WEAPON_Z_FRONT
-	if animation_state == PlayerVisual.MELEE_ANIMATION:
-		region_rect = SWING_REGION
-		rotation = facing_angle + tilt_sign * _swing_sweep_offset(state_elapsed)
+	# PlayerVisual keeps its authored four-frame melee clip alive beyond the
+	# 0.12s gameplay swing. The weapon must not advertise a recovery after the
+	# hitbox has closed, so it returns to its held pose at that real boundary.
+	var is_active_melee: bool = (
+		animation_state == PlayerVisual.MELEE_ANIMATION
+		and state_elapsed < SWING_SWEEP_SECONDS
+	)
+	if is_active_melee:
+		region_rect = _melee_region(state_elapsed)
+		rotation = facing_angle + tilt_sign * _melee_sweep_offset(state_elapsed)
 		flip_v = tilt_sign < 0.0
 	else:
 		region_rect = HELD_REGION
@@ -96,7 +108,22 @@ func update_presentation(
 		flip_v = false
 
 
-func _swing_sweep_offset(state_elapsed: float) -> float:
-	var progress: float = clampf(state_elapsed / SWING_SWEEP_SECONDS, 0.0, 1.0)
+func _melee_region(state_elapsed: float) -> Rect2:
+	if state_elapsed < WINDUP_SECONDS:
+		return WINDUP_REGION
+	if state_elapsed < WINDUP_SECONDS + CONTACT_SECONDS:
+		return CONTACT_REGION
+	return RECOVERY_REGION
+
+
+func _melee_sweep_offset(state_elapsed: float) -> float:
 	var half_arc: float = deg_to_rad(SWING_ARC_DEGREES) * 0.5
-	return lerpf(-half_arc, half_arc, progress)
+	var approach_end: float = -deg_to_rad(55.0)
+	var contact_end: float = deg_to_rad(55.0)
+	if state_elapsed < WINDUP_SECONDS:
+		return lerpf(-half_arc, approach_end, clampf(state_elapsed / WINDUP_SECONDS, 0.0, 1.0))
+	if state_elapsed < WINDUP_SECONDS + CONTACT_SECONDS:
+		var contact_elapsed: float = state_elapsed - WINDUP_SECONDS
+		return lerpf(approach_end, contact_end, clampf(contact_elapsed / CONTACT_SECONDS, 0.0, 1.0))
+	var recovery_elapsed: float = state_elapsed - WINDUP_SECONDS - CONTACT_SECONDS
+	return lerpf(contact_end, half_arc, clampf(recovery_elapsed / RECOVERY_SECONDS, 0.0, 1.0))

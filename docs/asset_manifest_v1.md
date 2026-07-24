@@ -76,7 +76,7 @@ phone smoke test before merge.
 
 | Group | Scope | Non-goals |
 |---|---|---|
-| Player HD presentation | Implemented in issue #150; body source upgraded in issue #165: a 1024×256 four-cell directional atlas (`assets/sprites/player/hd/player_directional_atlas.png`, 256×256 cells with a 190 px content box: north/west/south/east at columns 0–3; the authored side cells are never runtime-flipped) selected by `PlayerHdPresentation` from the live `PlayerVisual.facing_label`, shown at a 42 px display-height contract with presentation-only bob/lean gait, plus the retained directional cyan facing accent (magenta during dash/melee/relic) as a supporting cue and contact shadow. Issue #168 added the presentation-owned steel weapon, consolidated as the sole weapon display in issue #175: a deterministic CC0 512×128 two-cell atlas (`assets/sprites/player/hd/steel_weapon_atlas.png` from `assets/sprites/generate_hd_steel_weapon.py`) shown by `PlayerWeaponHdPresentation` at a 24 px length contract with the grip pivot on the hand anchor. Idle/move/dash/relic carry the held cell at a 55° down-forward rest tilt off the live facing (mirrored on west so both side stances match); melee switches to the authored swing cell and sweeps a 150° arc that crosses the exact `play_melee` facing (west sweep and its leading-edge art mirrored the same way), drawn behind the body only when facing north and hidden on death. The `CombatFxSpawner` slash stays the single complementary slash FX owner. | Movement, dash/melee/relic timing, hitboxes/hurtboxes, stats, saves, or player collision. |
+| Player HD presentation | Implemented in issue #150; body source upgraded in issue #165: a 1024×256 four-cell directional atlas (`assets/sprites/player/hd/player_directional_atlas.png`, 256×256 cells with a 190 px content box: north/west/south/east at columns 0–3; the authored side cells are never runtime-flipped) selected by `PlayerHdPresentation` from the live `PlayerVisual.facing_label`, shown at a 42 px display-height contract with presentation-only bob/lean gait, plus the retained directional cyan facing accent (magenta during dash/melee/relic) as a supporting cue and contact shadow. Issue #168 added the presentation-owned steel weapon, consolidated as the sole weapon display in issue #175 and evolved in issue #184: a deterministic CC0 1024×128 four-cell atlas (`assets/sprites/player/hd/steel_weapon_atlas.png` from `assets/sprites/generate_hd_steel_weapon.py`) shown by `PlayerWeaponHdPresentation` at a 24 px length contract with the grip pivot on the hand anchor. Idle/move/dash/relic carry the held cell at a 55° down-forward rest tilt off the live facing (mirrored on west so both side stances match); melee uses equal 0.04-second wind-up, contact, and recovery cells across the existing 0.12-second melee state. The hand anchor stays fixed while the facing-truthful sweep starts at -75°, crosses the exact `play_melee` facing during contact, and finishes at +75° (west and its phase art mirror the same way), drawn behind the body only when facing north and hidden on death. The `CombatFxSpawner` slash stays the single complementary slash FX owner. | Movement, dash/melee/relic timing, hitboxes/hurtboxes, stats, saves, or player collision. |
 | Hub environment presentation | Implemented in issue #151: 1024×576 environment-only illustrated settlement plate, region-cropped/scaled by `HubHdPresentation` over the existing collision TileMapLayer. | Hub bounds/tile collision, spawn, checkpoint, skill-tree station, gate sensor/transition, camera, saves, or input behavior. |
 
 ### 3.2 Enemies and boss
@@ -173,7 +173,14 @@ runtime atlas ships; the raw generation source sheets were not committed
 so the all-resources export packages no unused reference PNGs.
 
 Issue #168 added the presentation-owned HD steel weapon described in §3.1.
-The deterministic generator produced byte-identical output across reruns
+Issue #184 evolves it into an explicit, hand-anchored wind-up → contact →
+recovery presentation over the unchanged 0.12-second melee state: the
+four-cell CC0 atlas selects phase-specific anticipation, impact, and
+follow-through art while the same hand anchor and facing-truthful rotation are
+maintained for all four facings. This remains display-only; PlayerMeleeAttack,
+hitboxes, damage, hitstop, collision, and action timing are untouched.
+
+The issue #168 deterministic generator produced byte-identical output across reruns
 (MD5 `b6d5401ddcc13d3023223eb0f42bd324`), Godot 4.7 headless import left the
 worktree clean, the focused weapon-presentation tests (9 tests) and the full
 GUT suite (497 tests) passed, and the release/no-threads Web export passed

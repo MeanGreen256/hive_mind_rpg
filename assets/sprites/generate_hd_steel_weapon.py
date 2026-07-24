@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Build the deterministic stylized-HD steel weapon atlas for issue #168.
+"""Build the deterministic stylized-HD steel weapon attack atlas for issue #184.
 
-Layout of assets/sprites/player/hd/steel_weapon_atlas.png (512x128, straight
-alpha), two 256x128 cells of one arming sword authored pointing +x with the
+Layout of assets/sprites/player/hd/steel_weapon_atlas.png (1024x128, straight
+alpha), four 256x128 cells of one arming sword authored pointing +x with the
 grip center (the runtime rotation pivot) at x=24, y=64:
-  cell x=0   : held pose — clean steel blade, fuller, iron crossguard,
+ cell x=0   : held pose — clean steel blade, fuller, iron crossguard,
                leather-wrapped grip, steel pommel
-  cell x=256 : swing pose — same silhouette with a white-hot leading edge on
-               the +y side and a translucent motion smear trailing on the -y
-               side (rotation increases clockwise at runtime, so +y leads)
+ cell x=256 : wind-up — restrained anticipation trail on the +y side
+ cell x=512 : contact — white-hot leading edge, tip flash, and broad -y trail
+ cell x=768 : recovery — fading -y follow-through trail
 
 Every pixel is computed from closed-form math (no randomness, no external
 source imagery), so reruns are byte-identical and the output is CC0-safe
@@ -23,7 +23,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent / "player" / "hd"
 
-SHEET_SIZE = (512, 128)
+SHEET_SIZE = (1024, 128)
 CELL_SIZE = (256, 128)
 AXIS_Y = 64.0
 
@@ -53,6 +53,7 @@ LEATHER = (0.34, 0.23, 0.15)
 POMMEL_STEEL = (0.40, 0.42, 0.48)
 HOT_EDGE = (1.0, 0.99, 0.95)
 SMEAR_STEEL = (0.85, 0.89, 0.95)
+IMPACT_GOLD = (1.0, 0.72, 0.28)
 
 
 def _clamp01(value: float) -> float:
@@ -83,7 +84,7 @@ def _blade_half_width(x: float) -> float:
     return BLADE_TAPER_HALF_WIDTH * max(0.0, 1.0 - progress) ** 0.85
 
 
-def _blade_pixel(x: float, dy: float, swing: bool) -> tuple:
+def _blade_pixel(x: float, dy: float, attack_phase: str) -> tuple:
     half_width = _blade_half_width(x)
     alpha = _coverage(half_width - abs(dy))
     if alpha <= 0.0 or half_width <= 0.0:
@@ -97,7 +98,7 @@ def _blade_pixel(x: float, dy: float, swing: bool) -> tuple:
     edge_proximity = half_width - abs(dy)
     if edge_proximity < 1.4:
         color = _lerp_color(color, STEEL_EDGE, 0.6 * (1.0 - edge_proximity / 1.4))
-    if swing:
+    if attack_phase == "contact":
         color = tuple(_clamp01(channel * 1.08) for channel in color)
         if dy > 0.0 and edge_proximity < 1.8 and x >= 70.0:
             heat = _clamp01((x - 70.0) / (BLADE_TIP_X - 74.0))
@@ -140,22 +141,42 @@ def _pommel_pixel(x: float, dy: float) -> tuple:
     return (color[0], color[1], color[2], alpha)
 
 
-def _smear_pixel(x: float, dy: float) -> tuple:
-    """Trailing motion smear above the blade (-y side) for the swing cell."""
+def _motion_pixel(x: float, dy: float, attack_phase: str) -> tuple:
+    """Phase-specific anticipation, impact, and follow-through silhouettes."""
     half_width = _blade_half_width(x)
-    if half_width <= 0.0 or dy >= 0.0 or x < 64.0 or x > 226.0:
-        return (0.0, 0.0, 0.0, 0.0)
-    trail_distance = -dy - half_width
-    if trail_distance <= 0.0:
+    if half_width <= 0.0 or x < 64.0 or x > 226.0:
         return (0.0, 0.0, 0.0, 0.0)
     envelope = math.sin(math.pi * (x - 64.0) / 162.0)
     if envelope <= 0.0:
         return (0.0, 0.0, 0.0, 0.0)
     streak = 0.55 + 0.45 * math.cos(math.tau * (x - 64.0) / 34.0)
-    alpha = 0.42 * math.exp(-trail_distance / 12.0) * envelope * _clamp01(streak)
+    if attack_phase == "windup":
+        trail_distance = dy - half_width
+        strength = 0.24
+        decay = 8.0
+        color = SMEAR_STEEL
+    else:
+        trail_distance = -dy - half_width
+        strength = 0.52 if attack_phase == "contact" else 0.30
+        decay = 15.0 if attack_phase == "contact" else 10.0
+        color = HOT_EDGE if attack_phase == "contact" else SMEAR_STEEL
+    if trail_distance <= 0.0:
+        return (0.0, 0.0, 0.0, 0.0)
+    alpha = strength * math.exp(-trail_distance / decay) * envelope * _clamp01(streak)
     if alpha <= 0.004:
         return (0.0, 0.0, 0.0, 0.0)
-    return (SMEAR_STEEL[0], SMEAR_STEEL[1], SMEAR_STEEL[2], alpha)
+    return (color[0], color[1], color[2], alpha)
+
+
+def _contact_flash_pixel(x: float, dy: float, attack_phase: str) -> tuple:
+    """Compact contact-only flare; it is visual art, not a second hit effect."""
+    if attack_phase != "contact":
+        return (0.0, 0.0, 0.0, 0.0)
+    distance = math.hypot((x - BLADE_TIP_X) / 1.45, dy)
+    alpha = _coverage(13.0 - distance) * 0.78
+    if alpha <= 0.0:
+        return (0.0, 0.0, 0.0, 0.0)
+    return (IMPACT_GOLD[0], IMPACT_GOLD[1], IMPACT_GOLD[2], alpha)
 
 
 def _composite(base: tuple, over: tuple) -> tuple:
@@ -170,12 +191,13 @@ def _composite(base: tuple, over: tuple) -> tuple:
     return (color[0], color[1], color[2], alpha)
 
 
-def _sword_pixel(x: float, y: float, swing: bool) -> tuple:
+def _sword_pixel(x: float, y: float, attack_phase: str) -> tuple:
     dy = y - AXIS_Y
     pixel = (0.0, 0.0, 0.0, 0.0)
-    if swing:
-        pixel = _composite(pixel, _smear_pixel(x, dy))
-    pixel = _composite(pixel, _blade_pixel(x, dy, swing))
+    if attack_phase:
+        pixel = _composite(pixel, _motion_pixel(x, dy, attack_phase))
+        pixel = _composite(pixel, _contact_flash_pixel(x, dy, attack_phase))
+    pixel = _composite(pixel, _blade_pixel(x, dy, attack_phase))
     pixel = _composite(pixel, _guard_pixel(x, dy))
     pixel = _composite(pixel, _grip_pixel(x, dy))
     pixel = _composite(pixel, _pommel_pixel(x, dy))
@@ -185,11 +207,11 @@ def _sword_pixel(x: float, y: float, swing: bool) -> tuple:
 def build_sheet() -> Image.Image:
     image = Image.new("RGBA", SHEET_SIZE, (0, 0, 0, 0))
     pixels = image.load()
-    for cell_index, swing in enumerate((False, True)):
+    for cell_index, attack_phase in enumerate(("", "windup", "contact", "recovery")):
         origin_x = cell_index * CELL_SIZE[0]
         for y in range(CELL_SIZE[1]):
             for x in range(CELL_SIZE[0]):
-                red, green, blue, alpha = _sword_pixel(x + 0.5, y + 0.5, swing)
+                red, green, blue, alpha = _sword_pixel(x + 0.5, y + 0.5, attack_phase)
                 if alpha <= 0.0:
                     continue
                 pixels[origin_x + x, y] = (

@@ -5,8 +5,9 @@ extends Node2D
 ## collision, or health. The body texture is a four-cell directional atlas
 ## curated from non-commercial Flux prototype output; see
 ## assets/sprites/LICENSES.md before distributing it beyond this project. The
-## steel weapon child (issue #168) is deterministic CC0 art; its melee sweep is
-## display-only and the CombatFxSpawner slash stays the single slash FX owner.
+## steel weapon child (issues #168/#184) is deterministic CC0 art; its hand-
+## anchored wind-up/contact/recovery is display-only and the CombatFxSpawner
+## slash stays the single slash FX owner.
 
 const ATLAS_TEXTURE: Texture2D = preload("res://assets/sprites/player/hd/player_directional_atlas.png")
 const HD_TEXTURE_FILTER: CanvasItem.TextureFilter = CanvasItem.TEXTURE_FILTER_LINEAR
