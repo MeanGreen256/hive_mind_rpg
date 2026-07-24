@@ -63,8 +63,10 @@ func test_atlas_is_a_documented_four_cell_directional_sheet() -> void:
 func test_atlas_region_follows_player_visual_facing_for_all_four_directions() -> void:
 	var display: Sprite2D = _presentation.get_display_sprite()
 	var cell: Vector2 = PlayerHdPresentation.ATLAS_CELL_SIZE
+	# Atlas side art is authored west in column 1 and east in column 3. This
+	# regression lock prevents left/right movement from selecting the opposite body.
 	var direction_expectations: Array[Array] = [
-		[Vector2.UP, 0], [Vector2.RIGHT, 1], [Vector2.DOWN, 2], [Vector2.LEFT, 3],
+		[Vector2.UP, 0], [Vector2.RIGHT, 3], [Vector2.DOWN, 2], [Vector2.LEFT, 1],
 	]
 	for expectation: Array in direction_expectations:
 		_legacy_visual.set_facing_direction(expectation[0] as Vector2)
