@@ -91,7 +91,14 @@ func update_presentation(
 	var tilt_sign: float = FACING_TILT_SIGNS.get(facing, 1.0)
 	position = HAND_ANCHORS.get(facing, HAND_ANCHORS[&"south"])
 	z_index = WEAPON_Z_BEHIND if facing == BEHIND_BODY_FACING else WEAPON_Z_FRONT
-	if animation_state == PlayerVisual.MELEE_ANIMATION:
+	# PlayerVisual keeps its authored four-frame melee clip alive beyond the
+	# 0.12s gameplay swing. The weapon must not advertise a recovery after the
+	# hitbox has closed, so it returns to its held pose at that real boundary.
+	var is_active_melee: bool = (
+		animation_state == PlayerVisual.MELEE_ANIMATION
+		and state_elapsed < SWING_SWEEP_SECONDS
+	)
+	if is_active_melee:
 		region_rect = _melee_region(state_elapsed)
 		rotation = facing_angle + tilt_sign * _melee_sweep_offset(state_elapsed)
 		flip_v = tilt_sign < 0.0

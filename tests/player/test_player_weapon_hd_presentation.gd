@@ -176,10 +176,17 @@ func test_melee_has_hand_anchored_windup_contact_and_recovery_for_all_four_facin
 			"%s must enter recovery instead of holding the contact pose" % facing)
 		assert_eq(_weapon.position, PlayerWeaponHdPresentation.HAND_ANCHORS[facing])
 		_presentation._process(PlayerWeaponHdPresentation.RECOVERY_SECONDS)
-		assert_almost_eq(_weapon.rotation, facing_angle + tilt_sign * half_arc, 0.001,
-			"%s recovery must finish on the follow-through side and clamp there" % facing)
-		_presentation._process(1.0)
-		assert_almost_eq(_weapon.rotation, facing_angle + tilt_sign * half_arc, 0.001)
+		# The presentation ends with the real 0.12s melee window even though the
+		# legacy body clip may remain action-locked through its fourth frame.
+		assert_eq(_weapon.region_rect, PlayerWeaponHdPresentation.HELD_REGION,
+			"%s weapon must return to held when gameplay melee ends" % facing)
+		assert_almost_eq(
+			_weapon.rotation,
+			facing_angle + tilt_sign * deg_to_rad(PlayerWeaponHdPresentation.REST_ANGLE_DEGREES),
+			0.001,
+			"%s weapon must not display recovery after the melee hit window" % facing
+		)
+		assert_false(_weapon.flip_v)
 		# Return to idle the same way the real clip does before the next facing.
 		_legacy_visual._on_clip_finished()
 
